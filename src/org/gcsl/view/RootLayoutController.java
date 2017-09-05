@@ -1,4 +1,4 @@
-package org.gcsl.View;
+package org.gcsl.view;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -23,6 +23,7 @@ public class RootLayoutController
     @FXML private void handleProcessRosters(ActionEvent event)
     {
         System.out.println("Process Rosters Clicked.");
+        app.processRosters();
     }
 
     @FXML private void handleReportsChampsExceptions(ActionEvent event)
