@@ -50,4 +50,9 @@ public class RootLayoutController
     {
         this.app = app;
     }
+
+    public void setStatus(String text)
+    {
+        status.setText(text);
+    }
 }
