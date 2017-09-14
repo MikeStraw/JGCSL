@@ -1,18 +1,22 @@
 package org.gcsl.model;
 
+import org.gcsl.sdif.SdifRec;
+import org.gcsl.util.Utils;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 public class Team
 {
     private int    id;
     private String code;
     private String name;
     private String lastUpdate;
+    private Set<Athlete> athletes = new HashSet<>();
 
-//    public Team(String sdifBuf) throws Exception
-//    {
-//        id = Utils.INVALID_ID;
-//        lastUpdate = "";
-//        popFromSdifData(sdifBuf);
-//    }
+
+    // CTOR used when reading data from DB or when all the components are known
     public Team(int id, String shortName, String longName, String lastUpdate)
     {
         this.id         = id;
@@ -21,20 +25,45 @@ public class Team
         this.lastUpdate = lastUpdate;
     }
 
+    // Factory method to create a Team object from SDIF data
+    public static Team fromSdifData(SdifRec rec)
+    {
+        String sdifData = rec.getDataBuf();
+        String code = sdifData.substring(13, 17).trim();
+        String name = sdifData.substring(17, 47).trim();
+
+        return new Team(Utils.INVALID_ID, code, name, "");
+    }
+
+
+    public void addAthlete(Athlete athlete)
+    {
+        athlete.setTeamId(id);
+        athletes.add(athlete);
+    }
+
     // ********** Public Getters
+    public Set<Athlete> getAthletes()  { return Collections.unmodifiableSet(athletes); }
+
     public int    getId()         { return id; }
     public String getCode()       { return code; }
     public String getName()       { return name; }
     public String getLastUpdate() { return lastUpdate; }
+
+    public void setId(int newId)
+    {
+        id = newId;
+        athletes.stream().forEach(a -> a.setTeamId(id) );
+    }
 
     @Override
     public boolean equals(Object o) {
         if (o == this)              return true;
         if (! (o instanceof Team))  return false;
 
-        // check everything except id and lastUpdate
+        // check everything except lastUpdate
         Team rhs = (Team) o;
-        return code.equals(rhs.code)  &&  name.equals(rhs.name);
+        return id == rhs.id  &&  code.equals(rhs.code)  &&  name.equals(rhs.name);
     }
 
     @Override
@@ -47,23 +76,6 @@ public class Team
     public String toString() { return makeHash(); }
 
     private String makeHash() {
-        return code + ":" + name;
+        return Integer.toString(id) +":" + code + ":" + name;
     }
-
-
-    // **********
-//    private void popFromSdifData(String sdifBuf) throws Exception
-//    {
-//        SdifReader.SdifRecType rt  = SdifReader.SdifRecType.fromString(sdifBuf.substring(0,2));
-//
-//        if (rt == SdifReader.SdifRecType.TEAM_ID_REC) {
-//            code = sdifBuf.substring(13, 17).trim();
-//            name = sdifBuf.substring(17, 47).trim();
-//        }
-//
-//        if (code.isEmpty()  ||  name.isEmpty() ) {
-//            throw new Exception("Invalid Team Data");
-//        }
-//    }
-
 }

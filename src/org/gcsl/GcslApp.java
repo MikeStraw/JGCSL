@@ -2,17 +2,20 @@ package org.gcsl;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.gcsl.model.ProcessArchiveItem;
 import org.gcsl.view.ProcessRosterDialogController;
 import org.gcsl.view.RootLayoutController;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.*;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
 public class GcslApp
@@ -47,8 +50,8 @@ public class GcslApp
     //
     public void processRosters()
     {
-        System.out.println("GcslApp::processRosters");
-        showProcessRosterDialog();
+        List<ProcessArchiveItem> rosterFiles = showProcessRosterDialog();
+        processRosterFiles(rosterFiles);
     }
 
 
@@ -69,7 +72,7 @@ public class GcslApp
 
     private String getDbVersion() throws SQLException
     {
-        String version = "";
+        String version;
         try(Statement statement = dbConn.createStatement()) {
             try(ResultSet rs = statement.executeQuery("select sqlite_version();")) {
                 version = rs.getString(1);
@@ -102,10 +105,34 @@ public class GcslApp
         System.out.println("Read properties file:  db at " + config.getProperty("db_file"));
     }
 
-    private boolean showProcessRosterDialog()
+    private void processRosterFiles(List<ProcessArchiveItem> rosterFiles)
     {
-        boolean rc = true;
+        // create the task
+        RosterFileProcessorTask task = new RosterFileProcessorTask(dbConn, rosterFiles);
+
+        // hook up status to task message
+        Label taskMessage = new Label();
+        taskMessage.textProperty().addListener((observable, oldValue, newValue) -> { gcslAppController.setStatus(newValue); });
+        taskMessage.textProperty().bind(task.messageProperty());
+
+        /*
+         * Really should break into 2 tasks ... RosterFileReaderTask that returns List<Team> teams read from the
+         * roster files.  Then run RostersToDbTask.
+         *
+         * Set up onSuccess handler
+         * task.setOnSucceeded(e -> { call RostersToDbTask ....});
+         */
+
+        // start the task
+        Thread backgroundThread = new Thread(task);
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
+    }
+
+    private List<ProcessArchiveItem> showProcessRosterDialog()
+    {
         String rosterDir = config.getProperty("rosters_dir");
+        List<ProcessArchiveItem> rosterFiles = Collections.emptyList();
 
         try {
             FXMLLoader loader = new FXMLLoader();
@@ -124,12 +151,12 @@ public class GcslApp
             controller.setRosterDir(rosterDir);
 
             dialogStage.showAndWait();
+            rosterFiles = controller.getRosterFiles();
         }
         catch (IOException e) {
             e.printStackTrace();
-            rc = false;
         }
 
-        return rc;
+        return rosterFiles;
     }
 }

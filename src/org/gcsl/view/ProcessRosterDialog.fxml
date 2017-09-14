@@ -31,8 +31,8 @@
                           <cellValueFactory><PropertyValueFactory property="selected" /></cellValueFactory>
                           <cellFactory><org.gcsl.util.CheckBoxCellFactory /></cellFactory>
                       </TableColumn>
-                      <TableColumn fx:id="pathColumn" prefWidth="200.0" text="Archive Name">
-                          <cellValueFactory><PropertyValueFactory property="path" /></cellValueFactory>
+                      <TableColumn fx:id="nameColumn" prefWidth="200.0" text="Archive Name">
+                          <cellValueFactory><PropertyValueFactory property="name" /></cellValueFactory>
                       </TableColumn>
                       <TableColumn fx:id="contentsColumn" prefWidth="250.0" text="Content">
                           <cellValueFactory><PropertyValueFactory property="contents" /></cellValueFactory>

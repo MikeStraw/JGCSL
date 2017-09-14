@@ -1,8 +1,6 @@
 package org.gcsl.util;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -33,6 +31,7 @@ public class Utils
         return dateStr;
     }
 
+
     // Determine the type of the file identified by filePath.  This method is only checking for
     // SD3 and ZIP extensions.
     public static Utils.ARCHIVE_FILE_TYPE getArchiveFileType(String filePath)
@@ -55,6 +54,33 @@ public class Utils
         }
 
         return type;
+    }
+
+    // Extract the file identified by fileName from the archive file.  Return the path
+    // to the extracted file.
+    public static String getFileFromArchive(String archivePath, String fileName) throws IOException
+    {
+        String extractedFilePath = "";
+
+        try (ZipFile zipFile = new ZipFile(archivePath)){
+            final Enumeration<? extends ZipEntry> entries = zipFile.entries();
+
+            while (entries.hasMoreElements()) {
+                final ZipEntry entry = entries.nextElement();
+                String zipEntryName = entry.getName();
+
+                if (zipEntryName.equals(fileName)) {
+                    extractedFilePath = extractArchiveEntry(entry, zipFile.getInputStream(entry));
+                }
+            }
+        }
+
+        return extractedFilePath;
+    }
+
+    public static List<String> getFileNamesFromArchive(String filePath)
+    {
+        return getFileNamesFromArchive(new File(filePath));
     }
 
     public static List<String> getFileNamesFromArchive(File file)
@@ -102,5 +128,22 @@ public class Utils
         }
 
         return files;
+    }
+
+
+    private static String extractArchiveEntry(final ZipEntry entry, InputStream is) throws IOException
+    {
+        final int BUFFER_SIZE = 8192;
+        String extractedFile = "./temp_" + entry.getName();
+
+        try (FileOutputStream fos = new FileOutputStream(extractedFile)){
+            final byte[] buf = new byte[BUFFER_SIZE];
+            int length;
+
+            while ((length = is.read(buf, 0, buf.length)) >= 0) {
+                fos.write(buf, 0, length);
+            }
+        }
+        return extractedFile;
     }
 }

@@ -2,8 +2,8 @@ package org.gcsl.sdif;
 
 public class SdifException extends Exception
 {
-    SdifException(String message)    { super(message); }
-    SdifException(Throwable cause)   { super(cause); }
-    SdifException(String message,
-                  Throwable cause)   { super(message, cause); }
+    public SdifException(String message)    { super(message); }
+    public SdifException(Throwable cause)   { super(cause); }
+    public SdifException(String message,
+                         Throwable cause)   { super(message, cause); }
 }
