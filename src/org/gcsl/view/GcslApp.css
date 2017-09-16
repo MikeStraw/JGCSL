@@ -1,0 +1,4 @@
+.background-pane{
+    -fx-background-image: url("swimming_image.jpg");
+    -fx-background-size: cover;
+}

@@ -3,7 +3,7 @@ package org.gcsl.view;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
-import javafx.scene.image.ImageView;
+import javafx.scene.layout.Pane;
 import org.gcsl.GcslApp;
 
 public class RootLayoutController
@@ -12,7 +12,7 @@ public class RootLayoutController
     //        Possibly try AnchorPane with VBox -OR- nest HBox inside center of BorderPane.
     private GcslApp app;
 
-    @FXML private ImageView imageView;
+    @FXML private Pane imagePane;
     @FXML private Label status;
 
     @FXML private void handleProcessResults(ActionEvent event)
