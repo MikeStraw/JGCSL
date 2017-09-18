@@ -83,6 +83,7 @@ public class GcslApp
     }
 
 
+    // Initialize the GcslApp GUI layout, by loading the FXML file.
     private void initRootLayout(Stage primaryStage, String fxmlPath) throws IOException
     {
         FXMLLoader loader = new FXMLLoader();
@@ -105,19 +106,21 @@ public class GcslApp
         System.out.println("Read properties file:  db at " + config.getProperty("db_file"));
     }
 
+    // Process a list of roster files.  Teams and athletes identified in the roster files will
+    // be added to the DB.
     private void processRosterFiles(List<ProcessArchiveItem> rosterFiles)
     {
-        // create the task
+        // create the background task
         RosterFileProcessorTask task = new RosterFileProcessorTask(dbConn, rosterFiles);
 
-        // hook up status to task message
+        // hook up status line on the GUI to the task message
         Label taskMessage = new Label();
         taskMessage.textProperty().addListener((observable, oldValue, newValue) -> { gcslAppController.setStatus(newValue); });
         taskMessage.textProperty().bind(task.messageProperty());
 
         /*
          * Really should break into 2 tasks ... RosterFileReaderTask that returns List<Team> teams read from the
-         * roster files.  Then run RostersToDbTask.
+         * SDIF roster files.  Then run RostersToDbTask which updates the DB.
          *
          * Set up onSuccess handler
          * task.setOnSucceeded(e -> { call RostersToDbTask ....});
@@ -129,6 +132,7 @@ public class GcslApp
         backgroundThread.start();
     }
 
+    // Show the process roster dialog which allows the user to select which roster files to process.
     private List<ProcessArchiveItem> showProcessRosterDialog()
     {
         String rosterDir = config.getProperty("rosters_dir");

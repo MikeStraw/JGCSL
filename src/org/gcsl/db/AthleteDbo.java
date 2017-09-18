@@ -72,4 +72,14 @@ public class AthleteDbo {
             pstmt.executeUpdate();
         }
     }
+
+    public static void remove(Connection db, Athlete athlete) throws SQLException
+    {
+        String sql = "DELETE FROM Athletes WHERE id = ?";
+
+        try (PreparedStatement pstmt = db.prepareStatement(sql)){
+            pstmt.setInt(1, athlete.getId());
+            pstmt.executeUpdate();
+        }
+    }
 }

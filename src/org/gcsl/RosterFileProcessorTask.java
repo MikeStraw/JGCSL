@@ -4,9 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import javafx.concurrent.Task;
 import org.gcsl.db.AthleteDbo;
@@ -42,34 +40,38 @@ public class RosterFileProcessorTask extends Task<String>
         {
             if (isCancelled())  { break; }
             curItem++;
-
             try {
+                dbConn.setAutoCommit(false); // use transactions for performance reasons.
+
                 String archiveFilePath = archiveItem.getDirectory() + File.separator + archiveItem.getName();
                 Team csvTeam = readRosterArchive(archiveFilePath);
                 Team dbTeam  = TeamDbo.find(dbConn, csvTeam);
                 if (dbTeam == null) {
+                    // Team not in DB, add it to DB.
                     dbTeam = TeamDbo.insert(dbConn, csvTeam);
                 }
+                else {
+                    // Team in DB, get all the athletes associated with this team.
+                    dbTeam.addRoster(TeamDbo.retrieveAthletes(dbConn, dbTeam));
+                }
 
-                // now we know the team ID, assign it to the csvTeam
-                csvTeam.setId(dbTeam.getId());
+                csvTeam.setId(dbTeam.getId());   // now we know the team ID, assign it to the csvTeam
 
-                // If the team read from the DB does not have any athletes, add all the
-                // csvTeam athletes to the DB.  Otherwise, merge the csvTeam athletes
-                // with the dbTeam athletes.  Merge may add and/or delete athletes.
                 if (dbTeam.getAthletes().size() == 0) {
-                    for (Athlete a : csvTeam.getAthletes()) {
-                        AthleteDbo.insert(dbConn, a);
-                    }
+                    insertAthletes(csvTeam.getAthletes());
                 }
                 else {
-                    // merge athletes (dbTeam, csvTeam
+                    mergeAthletes(dbTeam, csvTeam);
                 }
-
+                dbConn.commit();
             }
             catch (SdifException | IOException | SQLException e) {
+                try { dbConn.rollback(); } catch (SQLException e1) { ; }
                 updateMessage("Task Failed ..." + e.getMessage());
                 return "Failure";
+            }
+            finally {
+                try { dbConn.setAutoCommit(true); } catch (SQLException e) { ; }
             }
 
             updateMessage("Processing archive: " + archiveItem.getName());
@@ -80,6 +82,16 @@ public class RosterFileProcessorTask extends Task<String>
     }
 
 
+    // Remove a set of athletes from the DB.
+    // Throw an SQLException if there is a DB error.
+    private void deleteAthletes(Set<Athlete> athletes) throws SQLException
+    {
+        dbConn.setAutoCommit(false);
+        for (Athlete athlete : athletes) {
+            System.out.printf("Deleting athlete %s %n", athlete.toString());
+            AthleteDbo.remove(dbConn, athlete);
+        }
+    }
 
     // Extract the CL2 or HY3 file from the archive file.  Return the path to the extracted file.
     // Throw an SdifException if the archive does not contain a CL2 or HY3 file.
@@ -101,6 +113,39 @@ public class RosterFileProcessorTask extends Task<String>
         }
 
         throw new SdifException("Roster archive does not contain a .cl2 or hy3 file.");
+    }
+
+    // Insert a set of athletes into the DB.
+    // Throws an SQLException if there is a DB error.
+    private void insertAthletes(Set<Athlete> athletes) throws SQLException
+    {
+        System.out.printf("Inserting %d athletes into the DB. %n", athletes.size());
+        for (Athlete a : athletes) {
+            AthleteDbo.insert(dbConn, a);
+        }
+    }
+
+    private void mergeAthletes(Team existingTeam, Team newTeam) throws SQLException
+    {
+        Set<Athlete> addMeCache = new HashSet<>();
+        // Copy the existing athletes to initialize the deleteMeCache.  We'll eventually delete
+        // all athletes from the DB that remain in this set.
+        Set<Athlete> deleteMeCache = new HashSet<>(existingTeam.getAthletes());
+
+        for (Athlete athlete : newTeam.getAthletes()) {
+            // if athlete is removed from the delete cache, that means the athlete
+            // was on the existing roster and we don't need to do anything.
+            // Otherwise, the athlete was not on the existing roster and needs
+            // to put them the add cache.
+            if (! deleteMeCache.remove(athlete)) {
+                addMeCache.add(athlete);
+            }
+        }
+
+        System.out.printf("mergeAthletes:  New roster for team %s, delete count=%d, add count=%d %n",
+                          newTeam.getName(), deleteMeCache.size(), addMeCache.size());
+        if (deleteMeCache.size() > 0)  { deleteAthletes(deleteMeCache); }
+        if (addMeCache.size() > 0)     { insertAthletes(addMeCache); }
     }
 
 

@@ -42,6 +42,13 @@ public class Team
         athletes.add(athlete);
     }
 
+    // Add all the athletes from the set of newAthletes.  It is assumed that all the
+    // new athletes already have the teamId value set properly.
+    public void addRoster(Set<Athlete> newAthletes)
+    {
+        athletes.addAll(newAthletes);
+    }
+
     // ********** Public Getters
     public Set<Athlete> getAthletes()  { return Collections.unmodifiableSet(athletes); }
 
