@@ -60,7 +60,7 @@ public class Team
     public void setId(int newId)
     {
         id = newId;
-        athletes.stream().forEach(a -> a.setTeamId(id) );
+        athletes.forEach(a -> a.setTeamId(id) );
     }
 
     @Override

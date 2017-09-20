@@ -17,7 +17,7 @@ public class TeamDbo {
     {
         Team   dbTeam = null;
         String query = "SELECT * FROM Teams WHERE code = '" + team.getCode() + "'";
-        System.out.println("TeamDbo::find - " + query);
+//        System.out.println("TeamDbo::find - " + query);
 
         try (Statement stmt = db.createStatement();
              ResultSet rs = stmt.executeQuery(query)){
@@ -40,7 +40,7 @@ public class TeamDbo {
     public static Team insert(Connection db, Team team) throws SQLException
     {
         String sql = "INSERT INTO Teams (name, code) VALUES ( ?, ? )";
-        System.out.println("TeamDbo::insert - " + sql);
+//        System.out.println("TeamDbo::insert - " + sql);
         try (PreparedStatement pstmt = db.prepareStatement(sql)) {
             pstmt.setString(1, team.getName());
             pstmt.setString(2, team.getCode());
@@ -73,7 +73,7 @@ public class TeamDbo {
                 }
             }
         }
-        System.out.printf("TeamDbo::retrieveAthletes found %d athletes in DB. %n", athletes.size() );
+//        System.out.printf("TeamDbo::retrieveAthletes found %d athletes in DB. %n", athletes.size() );
         return athletes;
     }
 }

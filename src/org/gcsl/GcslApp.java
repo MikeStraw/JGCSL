@@ -8,6 +8,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.gcsl.model.ProcessArchiveItem;
+import org.gcsl.model.Team;
 import org.gcsl.view.ProcessRosterDialogController;
 import org.gcsl.view.RootLayoutController;
 
@@ -106,31 +107,40 @@ public class GcslApp
         System.out.println("Read properties file:  db at " + config.getProperty("db_file"));
     }
 
+
     // Process a list of roster files.  Teams and athletes identified in the roster files will
     // be added to the DB.
     private void processRosterFiles(List<ProcessArchiveItem> rosterFiles)
     {
         // create the background task
-        RosterFileProcessorTask task = new RosterFileProcessorTask(dbConn, rosterFiles);
+        ReadRosterFilesTask readRosterFilesTask = new ReadRosterFilesTask(rosterFiles);
 
         // hook up status line on the GUI to the task message
         Label taskMessage = new Label();
         taskMessage.textProperty().addListener((observable, oldValue, newValue) -> { gcslAppController.setStatus(newValue); });
-        taskMessage.textProperty().bind(task.messageProperty());
+        taskMessage.textProperty().bind(readRosterFilesTask.messageProperty());
 
-        /*
-         * Really should break into 2 tasks ... RosterFileReaderTask that returns List<Team> teams read from the
-         * SDIF roster files.  Then run RostersToDbTask which updates the DB.
-         *
-         * Set up onSuccess handler
-         * task.setOnSucceeded(e -> { call RostersToDbTask ....});
-         */
+        // if reading of the roster files from archive items is successful,
+        // add the teams/athletes to the DB.
+        readRosterFilesTask.setOnSucceeded(e -> {
+            List<Team> teamsFromArchive = readRosterFilesTask.getValue();
+            System.out.printf("ReadRosterFilesTask return %d teams. %n", teamsFromArchive.size());
 
-        // start the task
-        Thread backgroundThread = new Thread(task);
+            RostersToDbTask dbTask = new RostersToDbTask(dbConn, teamsFromArchive);
+            taskMessage.textProperty().unbind();
+            taskMessage.textProperty().bind(dbTask.messageProperty());
+
+            Thread backgroundThread = new Thread(dbTask);
+            backgroundThread.setDaemon(true);
+            backgroundThread.start();
+        });
+
+        // start the roster reading task
+        Thread backgroundThread = new Thread(readRosterFilesTask);
         backgroundThread.setDaemon(true);
         backgroundThread.start();
     }
+
 
     // Show the process roster dialog which allows the user to select which roster files to process.
     private List<ProcessArchiveItem> showProcessRosterDialog()
