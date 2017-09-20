@@ -1,5 +1,6 @@
 package org.gcsl;
 
+import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -9,8 +10,8 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.gcsl.model.ProcessArchiveItem;
 import org.gcsl.model.Team;
+import org.gcsl.view.GcslAppController;
 import org.gcsl.view.ProcessRosterDialogController;
-import org.gcsl.view.RootLayoutController;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -19,26 +20,23 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
-public class GcslApp
+public class GcslApp extends Application
 {
-    private Properties           config;
-    private Connection           dbConn;
-    private RootLayoutController gcslAppController;
-    private Stage                primaryStage;
+    private Properties        config;
+    private Connection        dbConn;
+    private GcslAppController gcslAppController;
+    private String            gcslAppFxmlPath = "view/GcslApp.fxml";
+    private Stage             primaryStage;
 
 
-    // Create the app with a stage connected to the FXML file identified by fxmlPath.
-    GcslApp(Stage primaryStage, String fxmlPath) throws Exception
+    @Override
+    public void start(Stage primaryStage) throws Exception
     {
-        initRootLayout(primaryStage, fxmlPath);
+        this.primaryStage = primaryStage;
+        initRootLayout();
         loadConfig();
         connectToDb();
-    }
 
-
-    // show the GCSL app UI.
-    void start()
-    {
         primaryStage.show();
     }
 
@@ -85,16 +83,15 @@ public class GcslApp
 
 
     // Initialize the GcslApp GUI layout, by loading the FXML file.
-    private void initRootLayout(Stage primaryStage, String fxmlPath) throws IOException
+    private void initRootLayout() throws IOException
     {
         FXMLLoader loader = new FXMLLoader();
 
-        loader.setLocation(getClass().getResource(fxmlPath));
+        loader.setLocation(getClass().getResource(gcslAppFxmlPath));
         BorderPane root = loader.load();
         gcslAppController = loader.getController();
         gcslAppController.setApp(this);  // allow communication from controller back to app
 
-        this.primaryStage = primaryStage;
         this.primaryStage.setTitle("GCSL Registrar");
         this.primaryStage.setScene(new Scene(root, 525, 405));
     }
