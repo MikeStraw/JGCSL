@@ -11,6 +11,7 @@ import javafx.stage.Stage;
 import org.gcsl.model.ProcessArchiveItem;
 import org.gcsl.model.Team;
 import org.gcsl.view.GcslAppController;
+import org.gcsl.view.ProcessResultsDialogController;
 import org.gcsl.view.ProcessRosterDialogController;
 
 import java.io.FileInputStream;
@@ -42,7 +43,18 @@ public class GcslApp extends Application
 
 
     // ********************     Public Methods
-    // Process all the rosters in a particular directory.  This method will create
+    // Process the meet results in a particular directory.  This method will update the
+    // Athlete-Meet table based on the results.  Orphan table entries may be created
+    // for athletes that have results but are not found in a team roster.
+    public void processMeetResults()
+    {
+        System.out.printf("Inside processMeetResults.");
+        List<ProcessArchiveItem> resultFiles = showProcessResultsDialog();
+        processResultFiles(resultFiles);
+    }
+
+
+    // Process the rosters in a particular directory.  This method will create
     // new teams in the DB if necessary and add all new athletes.  If a team with
     // athletes already exists, this method will add new athletes and remove
     // existing athletes that are not in the new roster.
@@ -105,6 +117,11 @@ public class GcslApp extends Application
     }
 
 
+    private void processResultFiles(List<ProcessArchiveItem> resultFiles)
+    {
+        System.out.printf("Inside processResultFiles. resultsFile.size()=" + resultFiles.size());
+    }
+
     // Process a list of roster files.  Teams and athletes identified in the roster files will
     // be added to the DB.
     private void processRosterFiles(List<ProcessArchiveItem> rosterFiles)
@@ -136,6 +153,40 @@ public class GcslApp extends Application
         Thread backgroundThread = new Thread(readRosterFilesTask);
         backgroundThread.setDaemon(true);
         backgroundThread.start();
+    }
+
+
+    // Show the process results dialog which allows the user to select which meet result files to process.
+    private List<ProcessArchiveItem> showProcessResultsDialog()
+    {
+        String resultsDir = config.getProperty("rosters_dir");
+        List<ProcessArchiveItem> resultFiles = Collections.emptyList();
+
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(GcslApp.class.getResource("view/ProcessResultsDialog.fxml"));
+            VBox page = loader.load();
+
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Roster Dialog");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(primaryStage);
+            Scene scene = new Scene(page);
+            dialogStage.setScene(scene);
+
+
+            ProcessResultsDialogController controller = loader.getController();
+            controller.setDialogStage(dialogStage);
+            controller.setResultDir(resultsDir);
+
+            dialogStage.showAndWait();
+            resultFiles = controller.getResultFiles();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return resultFiles;
     }
 
 

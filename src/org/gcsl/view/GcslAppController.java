@@ -15,6 +15,7 @@ public class GcslAppController
     @FXML private void handleProcessResults(/* ActionEvent event */)
     {
         System.out.println("Process Results Clicked.");
+        app.processMeetResults();
     }
 
     @FXML private void handleProcessRosters(/* ActionEvent event */)

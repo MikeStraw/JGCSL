@@ -23,8 +23,7 @@ import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 
-
-public class ProcessRosterDialogController
+public class ProcessResultsDialogController
 {
     @FXML private TextField archiveDir;
     @FXML private Button    browseBtn;
@@ -35,20 +34,20 @@ public class ProcessRosterDialogController
     @FXML private TableView<ProcessArchiveItem> archiveTable;
     @FXML private TableColumn<ProcessArchiveItem, String> nameColumn;
     @FXML private TableColumn<ProcessArchiveItem, String> contentsColumn;
+    @FXML private TableColumn<ProcessArchiveItem, String> scenarioColumn;
     @FXML private TableColumn<ProcessArchiveItem, Boolean> selectedColumn;
 
     private boolean archiveDirIsDirty = false;
     private Stage dialogStage;
     private final ObservableList<ProcessArchiveItem> archiveItemsList = FXCollections.observableArrayList();
-    private List<ProcessArchiveItem> rosterFiles = Collections.emptyList();
+    private List<ProcessArchiveItem> resultFiles = Collections.emptyList();
 
     // ********************************************************************************
     // ***************     Public Methods
     // ********************************************************************************
-    public List<ProcessArchiveItem> getRosterFiles()  { return rosterFiles; }
+    public List<ProcessArchiveItem> getResultFiles()  { return resultFiles; }
     public void setDialogStage(Stage stage)           { dialogStage = stage; }
-    public void setRosterDir(String dir)              { archiveDir.setText(dir); }
-
+    public void setResultDir(String dir)              { archiveDir.setText(dir); }
 
     // ********************************************************************************
     // ***************     Private GUI methods
@@ -86,13 +85,13 @@ public class ProcessRosterDialogController
     }
     @FXML private void handleCancelButtonClick()
     {
-        rosterFiles = Collections.emptyList();
+        resultFiles = Collections.emptyList();
         dialogStage.close();
     }
 
     @FXML private void handleProcessButtonClick()
     {
-        rosterFiles = archiveTable.getItems().stream().filter(t -> t.getSelected()).collect(toList());
+        resultFiles = archiveTable.getItems().stream().filter(t -> t.getSelected()).collect(toList());
         dialogStage.close();
     }
 
@@ -114,8 +113,15 @@ public class ProcessRosterDialogController
         archiveDir.focusedProperty().addListener( (ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) -> {
             focusState(newValue);
         });
-    }
 
+        // set on edit for combo box show result file processing scenarios
+        scenarioColumn.setOnEditCommit( (TableColumn.CellEditEvent<ProcessArchiveItem, String> e) -> {
+            String newValue = e.getNewValue();
+            int    index    = e.getTablePosition().getRow();
+            ProcessArchiveItem item   = e.getTableView().getItems().get(index);
+            item.setScenario(newValue);
+        });
+    }
 
     // ********************************************************************************
     // ***************     Private Methods
@@ -136,7 +142,7 @@ public class ProcessRosterDialogController
             List<String> filesInArchive = Utils.getFileNamesFromArchive(file);
             String contents = String.join(", ", filesInArchive);
             archiveItemsList.add(new ProcessArchiveItem(file.getPath(), contents, true,
-                                                        ProcessArchiveItem.Scenario.TEAM_ROSTER));
+                                                        ProcessArchiveItem.Scenario.MEET_RESULTS));
         }
 
         archiveDirIsDirty = false;
