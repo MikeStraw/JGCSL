@@ -43,7 +43,7 @@ public class SdifFileDescription
     String       vendorVersion;
 
     // Create an SDIF File Descriptor from a File Description Record
-    SdifFileDescription(String sdifBuf) throws SdifException {
+    public SdifFileDescription(String sdifBuf) throws SdifException {
         popFromSdifData(sdifBuf);
     }
 

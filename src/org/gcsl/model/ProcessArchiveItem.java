@@ -23,10 +23,19 @@ public class ProcessArchiveItem
         MEET_RESULTS("Meet Results"),
         RAIN_OUT_ENTRIES("Rain Out Entries"),
         RAIN_OUT_RESULTS("Rain Out Results"),
-        TEAM_ROSTER("Team Roster");
+        TEAM_ROSTER("Team Roster"),
+        UNKNOWN("");
 
         private final String text;
         Scenario(final String scenarioText) { text = scenarioText; }
+
+        public static Scenario getValue(String s)
+        {
+            for (Scenario scenario : Scenario.values()) {
+                if (scenario.toString().equals(s)) return scenario;
+            }
+            return UNKNOWN;
+        }
 
         @Override
         public String toString()  { return text; }
@@ -53,6 +62,7 @@ public class ProcessArchiveItem
     public void   setName(String newName)        { name.set(newName); }
 
     public String getScenario()                  { return scenario.get(); }
+    public Scenario getScenarioType()            { return Scenario.getValue(scenario.get()); }
     public void   setScenario(String newScenario){ this.scenario.set(newScenario); }
 
     public BooleanProperty selectedProperty()    { return selected; }

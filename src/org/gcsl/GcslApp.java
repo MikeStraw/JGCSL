@@ -8,6 +8,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.gcsl.model.MeetResults;
 import org.gcsl.model.ProcessArchiveItem;
 import org.gcsl.model.Team;
 import org.gcsl.view.GcslAppController;
@@ -26,7 +27,6 @@ public class GcslApp extends Application
     private Properties        config;
     private Connection        dbConn;
     private GcslAppController gcslAppController;
-    private String            gcslAppFxmlPath = "view/GcslApp.fxml";
     private Stage             primaryStage;
 
 
@@ -99,7 +99,7 @@ public class GcslApp extends Application
     {
         FXMLLoader loader = new FXMLLoader();
 
-        loader.setLocation(getClass().getResource(gcslAppFxmlPath));
+        loader.setLocation(getClass().getResource("view/GcslApp.fxml"));
         BorderPane root = loader.load();
         gcslAppController = loader.getController();
         gcslAppController.setApp(this);  // allow communication from controller back to app
@@ -120,7 +120,31 @@ public class GcslApp extends Application
     private void processResultFiles(List<ProcessArchiveItem> resultFiles)
     {
         System.out.printf("Inside processResultFiles. resultsFile.size()=" + resultFiles.size());
+        ReadResultFilesTask readResultFilesTask = new ReadResultFilesTask(resultFiles);
+
+        // hook up status line on the GUI to the task message
+        Label taskMessage = new Label();
+        taskMessage.textProperty().addListener((observable, oldValue, newValue) -> { gcslAppController.setStatus(newValue); });
+        taskMessage.textProperty().bind(readResultFilesTask.messageProperty());
+
+        readResultFilesTask.setOnSucceeded(e -> {
+            List<MeetResults> meetResults = readResultFilesTask.getValue();
+
+            ResultsToDbTask dbTask = new ResultsToDbTask(dbConn, meetResults);
+            taskMessage.textProperty().unbind();
+            taskMessage.textProperty().bind(dbTask.messageProperty());
+
+            Thread backgroundThread = new Thread(dbTask);
+            backgroundThread.setDaemon(true);
+            backgroundThread.start();
+        });
+
+        // start the roster reading task
+        Thread backgroundThread = new Thread(readResultFilesTask);
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
     }
+
 
     // Process a list of roster files.  Teams and athletes identified in the roster files will
     // be added to the DB.
@@ -159,7 +183,7 @@ public class GcslApp extends Application
     // Show the process results dialog which allows the user to select which meet result files to process.
     private List<ProcessArchiveItem> showProcessResultsDialog()
     {
-        String resultsDir = config.getProperty("rosters_dir");
+        String resultsDir = config.getProperty("results_dir");
         List<ProcessArchiveItem> resultFiles = Collections.emptyList();
 
         try {
@@ -168,12 +192,11 @@ public class GcslApp extends Application
             VBox page = loader.load();
 
             Stage dialogStage = new Stage();
-            dialogStage.setTitle("Roster Dialog");
+            dialogStage.setTitle("Results Dialog");
             dialogStage.initModality(Modality.WINDOW_MODAL);
             dialogStage.initOwner(primaryStage);
             Scene scene = new Scene(page);
             dialogStage.setScene(scene);
-
 
             ProcessResultsDialogController controller = loader.getController();
             controller.setDialogStage(dialogStage);
