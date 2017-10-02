@@ -3,6 +3,7 @@ package org.gcsl.db;
 import org.gcsl.model.Athlete;
 
 import java.sql.*;
+import java.util.Set;
 
 public class AthleteDbo {
 
@@ -35,6 +36,8 @@ public class AthleteDbo {
 
         return athleteFromDb;
     }
+
+    // find an athlete in the DB based on the athlete ID
     public static Athlete find(Connection db, int athleteId) throws SQLException
     {
         Athlete athleteFromDb = null;
@@ -59,6 +62,7 @@ public class AthleteDbo {
         return athleteFromDb;
     }
 
+    // insert a single athlete into the DB.
     public static void insert(Connection db, Athlete athlete) throws SQLException
     {
         String sql = "INSERT INTO Athletes (name, dob, gender, team_id) VALUES ( ?, ?, ?, ? )";
@@ -70,6 +74,23 @@ public class AthleteDbo {
             pstmt.setInt(4, athlete.getTeamId());
 
             pstmt.executeUpdate();
+        }
+    }
+
+    // insert a set of athletes into the DB.
+    public static void insert(Connection db, Set<Athlete> athletes) throws SQLException
+    {
+        String sql = "INSERT INTO Athletes (name, dob, gender, team_id) VALUES ( ?, ?, ?, ? )";
+
+        try (PreparedStatement pstmt = db.prepareStatement(sql)){
+            for (Athlete athlete : athletes) {
+                pstmt.setString(1, athlete.getName());
+                pstmt.setString(2, athlete.getDob());
+                pstmt.setString(3, athlete.getGender());
+                pstmt.setInt(4, athlete.getTeamId());
+
+                pstmt.executeUpdate();
+            }
         }
     }
 

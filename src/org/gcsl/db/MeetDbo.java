@@ -7,6 +7,7 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 
 public class MeetDbo
 {
@@ -76,10 +77,8 @@ public class MeetDbo
         }
         else {
             for (Team team : meetResults.getTeams()) {
-                for (Athlete athlete : team.getAthletes()) {
-                    insertAthleteMeet(db, athlete.getId(), meetId);
-                }
-            }
+                insertAthleteMeet(db, team.getAthletes(), meetId);
+             }
         }
     }
 
@@ -115,15 +114,18 @@ public class MeetDbo
         return meet;
     }
 
-    private static void insertAthleteMeet(Connection db, int athleteId, int meetId) throws SQLException
+
+    private static void insertAthleteMeet(Connection db, Set<Athlete> athletes, int meetId) throws SQLException
     {
         String sql = "INSERT INTO Athlete_Meet (athlete_id, meet_id) VALUES ( ?, ? )";
 
         try (PreparedStatement pstmt = db.prepareStatement(sql)){
-            pstmt.setInt(1, athleteId);
-            pstmt.setInt(2, meetId);
+            for (Athlete athlete : athletes) {
+                pstmt.setInt(1, athlete.getId());
+                pstmt.setInt(2, meetId);
 
-            pstmt.executeUpdate();
+                pstmt.executeUpdate();
+            }
         }
     }
 
@@ -133,7 +135,7 @@ public class MeetDbo
     private static int insertMeet(Connection db, MeetResults meetResults) throws SQLException
     {
         String sql = "INSERT INTO Meets (meet_date, file_date, team1_id, team2_id, result_type) " +
-                "VALUES (?, ?, ?, ?, ?)";
+                     "VALUES (?, ?, ?, ?, ?)";
         int    team1Id = meetResults.getTeams().get(0).getId();
         int    team2Id = meetResults.getTeams().get(1).getId();
 

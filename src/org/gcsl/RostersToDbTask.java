@@ -98,9 +98,7 @@ public class RostersToDbTask extends Task<Void>
     private void insertAthletes(Set<Athlete> athletes) throws SQLException
     {
         System.out.printf("Inserting %d athletes into the DB. %n", athletes.size());
-        for (Athlete a : athletes) {
-            AthleteDbo.insert(dbConn, a);
-        }
+        AthleteDbo.insert(dbConn, athletes);
     }
 
 
