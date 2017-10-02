@@ -46,6 +46,7 @@ public class Athlete
     public int    getTeamId()     { return teamId; }
 
     // ********** Public Setters
+    public void setId(int id)         { this.id = id; }
     public void setTeamId(int teamId) { this.teamId = teamId; }
 
     @Override

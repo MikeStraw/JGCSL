@@ -42,6 +42,11 @@ public class Team
         athletes.add(athlete);
     }
 
+    public void removeAthlete(Athlete athlete)
+    {
+        athletes.remove(athlete);
+    }
+
     // Add all the athletes from the set of newAthletes.  It is assumed that all the
     // new athletes already have the teamId value set properly.
     public void addRoster(Set<Athlete> newAthletes)

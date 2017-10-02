@@ -1,12 +1,17 @@
 package org.gcsl.model;
 
+import org.gcsl.util.Utils;
+
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Vector;
 
 public class MeetResults
 {
     MeetInfo info;
+    String resultsFileDate;
+    List<Athlete> orphans = new Vector<>();
     ProcessArchiveItem.Scenario scenario;
     List<Team> teams = new Vector<>();
 
@@ -21,12 +26,17 @@ public class MeetResults
 
     }
 
-    public void addTeam(Team team) { teams.add(team); }
-    public boolean isByWeek()      { return scenario == ProcessArchiveItem.Scenario.BYE_WEEK_RESULTS; }
-    public boolean isRainOut()     { return scenario == ProcessArchiveItem.Scenario.RAIN_OUT_RESULTS; }
-    public LocalDate getDate()     { return info.getDate(); }
-    public String getName()        { return info.getName(); }
-    public List<Team> getTeams()   { return teams; }
+    public void addOrphan(Athlete orphan)         { orphans.add(orphan); }
+    public void addOrphans(List<Athlete> orphans) { this.orphans.addAll(orphans); }
+    public void addTeam(Team team)                { teams.add(team); }
 
+    public LocalDate getDate()             { return info.getDate(); }
+    public String getName()                { return info.getName(); }
+    public List<Athlete> getOrphans()      { return Collections.unmodifiableList(orphans); }
+    public String getResultsFileDate()     { return resultsFileDate; }
+    public ProcessArchiveItem.Scenario
+                  getResultsScenario()     { return scenario; }
+    public List<Team> getTeams()           { return teams; }
 
+    public void setResultFileDate(String date){ resultsFileDate = date; }
 }

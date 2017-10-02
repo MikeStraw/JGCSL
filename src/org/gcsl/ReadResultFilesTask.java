@@ -145,11 +145,11 @@ public class ReadResultFilesTask extends Task<List<MeetResults>>
     private MeetResults readResultFile(String resultFilePath,
                                        ProcessArchiveItem.Scenario scenario) throws SdifException
     {
-        SdifFileDescription.SdifFileType fileType= SdifFileDescription.SdifFileType.UNKNOWN;
+        SdifFileDescription.SdifFileType fileTypeExpected= SdifFileDescription.SdifFileType.UNKNOWN;
         SdifReader sdifReader = new SdifReader(resultFilePath);
 
         switch (scenario) {
-            case MEET_RESULTS:     { fileType = SdifFileDescription.SdifFileType.MEET_RESULTS;  break;}
+            case MEET_RESULTS:     { fileTypeExpected = SdifFileDescription.SdifFileType.MEET_RESULTS;  break;}
             case BYE_WEEK_RESULTS: { break; }
             case BYE_WEEK_ENTRIES: { break; }
             case RAIN_OUT_ENTRIES: { break; }
@@ -157,10 +157,12 @@ public class ReadResultFilesTask extends Task<List<MeetResults>>
             default:               { throw new SdifException("Invalid meet results scenario."); }
         }
 
-        List<SdifRec> sdifRecs = readResultFile(sdifReader, fileType);
+        List<SdifRec> sdifRecs = readResultFile(sdifReader, fileTypeExpected);
         Optional<MeetResults> results = processMeetResults(sdifRecs);
+        results.orElseThrow( () -> new SdifException("No results defined in the SDIF file.") )
+               .setResultFileDate(sdifReader.getFileDescription().getFileDate());
 
-        return results.orElseThrow( () -> new SdifException("No results defined in the SDIF file.") );
+        return results.get();
     }
 
     private List<SdifRec> readResultFile(SdifReader reader, SdifFileDescription.SdifFileType expectedSdifType) throws SdifException
