@@ -41,14 +41,8 @@ public class ReadResultFilesTask extends Task<List<MeetResults>>
             if (isCancelled())  { break; }
             curItem++;
 
-            try {
-                MeetResults result = readResultArchive(archiveItem);
-                results.add(result);
-            }
-            catch (SdifException | IOException e) {
-                updateMessage("Read results file task failed ..." + e.getMessage());
-                return null;
-            }
+            MeetResults result = readResultArchive(archiveItem);
+            results.add(result);
 
             updateMessage("Processing archive: " + archiveItem.getName());
             updateProgress(curItem, numItems);
@@ -145,18 +139,18 @@ public class ReadResultFilesTask extends Task<List<MeetResults>>
     private MeetResults readResultFile(String resultFilePath,
                                        ProcessArchiveItem.Scenario scenario) throws SdifException
     {
-        SdifFileDescription.SdifFileType fileTypeExpected= SdifFileDescription.SdifFileType.UNKNOWN;
-        SdifReader sdifReader = new SdifReader(resultFilePath);
+        SdifFileDescription.SdifFileType fileTypeExpected = SdifFileDescription.SdifFileType.UNKNOWN;
 
         switch (scenario) {
             case MEET_RESULTS:     { fileTypeExpected = SdifFileDescription.SdifFileType.MEET_RESULTS;  break;}
-            case BYE_WEEK_RESULTS: { break; }
-            case BYE_WEEK_ENTRIES: { break; }
-            case RAIN_OUT_ENTRIES: { break; }
-            case RAIN_OUT_RESULTS: { break; }
-            default:               { throw new SdifException("Invalid meet results scenario."); }
+            case BYE_WEEK_ENTRIES: { throw new RuntimeException("Do not support Bye Week Entries Yet.");}
+            case BYE_WEEK_RESULTS: { throw new RuntimeException("Do not support Bye Week Results Yet."); }
+            case RAIN_OUT_ENTRIES: { throw new RuntimeException("Do not support Rain Out Entries Yet."); }
+            case RAIN_OUT_RESULTS: { throw new RuntimeException("Do not support Rain Out Results Yet."); }
+            default:               { throw new RuntimeException("Invalid meet results scenario."); }
         }
 
+        SdifReader sdifReader = new SdifReader(resultFilePath);
         List<SdifRec> sdifRecs = readResultFile(sdifReader, fileTypeExpected);
         Optional<MeetResults> results = processMeetResults(sdifRecs);
         results.orElseThrow( () -> new SdifException("No results defined in the SDIF file.") )

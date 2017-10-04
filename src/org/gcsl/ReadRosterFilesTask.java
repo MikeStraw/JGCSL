@@ -44,15 +44,9 @@ public class ReadRosterFilesTask extends Task<List<Team>>
             if (isCancelled())  { break; }
             curItem++;
 
-            try {
-                String archiveFilePath = archiveItem.getDirectory() + File.separator + archiveItem.getName();
-                Team csvTeam = readRosterArchive(archiveFilePath);
-                teams.add(csvTeam);
-            }
-            catch (SdifException | IOException e) {
-                updateMessage("Read roster file task failed ..." + e.getMessage());
-                return null;
-            }
+            String archiveFilePath = archiveItem.getDirectory() + File.separator + archiveItem.getName();
+            Team csvTeam = readRosterArchive(archiveFilePath);
+            teams.add(csvTeam);
 
             updateMessage("Processing archive: " + archiveItem.getName());
             updateProgress(curItem, numItems);

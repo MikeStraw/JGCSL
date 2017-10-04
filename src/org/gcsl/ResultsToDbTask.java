@@ -43,7 +43,7 @@ public class ResultsToDbTask extends Task<Void>
             if (teams.size() < 2) {
                 System.err.println("Error:  Not 2 teams in the meet results.");
                 updateMessage("Error:  Not 2 teams in the meet results.");
-                break;
+                return null;
             }
 
             Meet dbMeet = MeetDbo.findByTeams(dbConn, meet);

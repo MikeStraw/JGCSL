@@ -31,49 +31,30 @@ public class RostersToDbTask extends Task<Void>
         int numItems = teams.size();
         System.out.printf("Inside RostersToDbTask, teams.size()=%d. %n", teams.size());
 
-        try {
-            dbConn.setAutoCommit(false); // use transactions for performance reasons.
-
-            for (Team team : teams) {
-                if (isCancelled()) {
-                    break;
-                }
-                curItem++;
-
-                Team dbTeam = TeamDbo.find(dbConn, team);
-                if (dbTeam == null) {
-                    // Team not in DB, add it to DB.
-                    dbTeam = TeamDbo.insert(dbConn, team);
-                } else {
-                    // Team in DB, get all the athletes associated with this team.
-                    dbTeam.addRoster(TeamDbo.retrieveAthletes(dbConn, dbTeam));
-                }
-                team.setId(dbTeam.getId());   // now we know the team ID, assign it to the csvTeam
-
-                if (dbTeam.getAthletes().size() == 0) {
-                    insertAthletes(team.getAthletes());
-                } else {
-                    mergeAthletes(dbTeam, team);
-                }
-                dbConn.commit();
-
-                updateMessage("Processing roster for team: " + team.getName());
-                updateProgress(curItem, numItems);
+        for (Team team : teams) {
+            if (isCancelled()) {
+                break;
             }
-        } catch (SQLException e) {
-            try {
-                dbConn.rollback();
-            } catch (SQLException e1) {
-                System.out.println(e1.getMessage());
+            curItem++;
+
+            Team dbTeam = TeamDbo.find(dbConn, team);
+            if (dbTeam == null) {
+                // Team not in DB, add it to DB.
+                dbTeam = TeamDbo.insert(dbConn, team);
+            } else {
+                // Team in DB, get all the athletes associated with this team.
+                dbTeam.addRoster(TeamDbo.retrieveAthletes(dbConn, dbTeam));
             }
-            updateMessage("Inserting teams/athletes to the DB failed ..." + e.getMessage());
-            return null;
-        } finally {
-            try {
-                dbConn.setAutoCommit(true);
-            } catch (SQLException e) {
-                System.out.println(e.getMessage());
+            team.setId(dbTeam.getId());   // now we know the team ID, assign it to the sdif-generated Team
+
+            if (dbTeam.getAthletes().size() == 0) {
+                insertAthletes(team.getAthletes());
+            } else {
+                mergeAthletes(dbTeam, team);
             }
+
+            updateMessage("Processing roster for team: " + team.getName());
+            updateProgress(curItem, numItems);
         }
 
         updateMessage("Successfully processed " + teams.size() + " team to the DB.");

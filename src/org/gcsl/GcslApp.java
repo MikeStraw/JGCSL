@@ -1,6 +1,9 @@
 package org.gcsl;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
+import javafx.concurrent.WorkerStateEvent;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -67,6 +70,17 @@ public class GcslApp extends Application
 
 
     // ********************     Private Methods
+    // bind the updateMessage calls from the task to the App's status label
+    private Label bindTaskMessageToStatus(Task task)
+    {
+        Label taskMessageLabel = new Label();
+        taskMessageLabel.textProperty().addListener((observable, oldValue, newValue) -> { gcslAppController.setStatus(newValue); });
+        taskMessageLabel.textProperty().bind(task.messageProperty());
+
+        return taskMessageLabel;
+    }
+
+
     // Connect to the SQLite database and get the version #
     private void connectToDb() throws SQLException
     {
@@ -117,32 +131,98 @@ public class GcslApp extends Application
     }
 
 
+    // The task OnFailure method that puts the tasks' exception message onto the status line.
+    private void onTaskFailure(Task task)
+    {
+        String errMsg = "Task Failure:  " + task.getException();
+        System.err.println(errMsg);
+
+        Platform.runLater(new Runnable(){
+            @Override
+            public void run() {
+                gcslAppController.setStatus(errMsg);
+            }
+        });
+    }
+
+    // The task OnFailure method that puts the tasks' exception message onto the status line
+    // and rolls back the DB.
+    private void onTaskFailureWithRollback(Task task)
+    {
+        onTaskFailure(task);
+        try {
+            dbConn.rollback();
+            dbConn.setAutoCommit(true);
+        } catch (SQLException e1) {
+            System.out.println(e1.getMessage());
+        }
+    }
+
+
+    // The task OnSuccess method that kicks off the tasks that adds the meet results to the DB
+    private void onTaskSuccess(ReadResultFilesTask task, Label taskMessage)
+    {
+        List<MeetResults> meetResults = task.getValue();
+        ResultsToDbTask dbTask = new ResultsToDbTask(dbConn, meetResults);
+
+        try {
+            dbConn.setAutoCommit(false);  // for performance reasons
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        dbTask.setOnSucceeded(event -> onTaskSuccessCommit() );
+        dbTask.setOnFailed(event -> onTaskFailureWithRollback(dbTask));
+
+        taskMessage.textProperty().unbind();
+        taskMessage.textProperty().bind(dbTask.messageProperty());
+
+        startTask(dbTask);
+    }
+
+
+    // The task OnSuccess method that kicks off the task that adds the teams/rosters to the DB.
+    private void onTaskSuccess(ReadRosterFilesTask task, Label taskMessage)
+    {
+        List<Team> teamsFromArchive = task.getValue();
+        RostersToDbTask dbTask = new RostersToDbTask(dbConn, teamsFromArchive);
+
+        try {
+            dbConn.setAutoCommit(false);  // for performance reasons
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        dbTask.setOnSucceeded(event -> onTaskSuccessCommit() );
+        dbTask.setOnFailed(event -> onTaskFailureWithRollback(dbTask));
+
+        taskMessage.textProperty().unbind();
+        taskMessage.textProperty().bind(dbTask.messageProperty());
+
+        startTask(dbTask);
+    }
+
+
+    private void onTaskSuccessCommit()
+    {
+        try {
+            dbConn.commit();
+            dbConn.setAutoCommit(true);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
     private void processResultFiles(List<ProcessArchiveItem> resultFiles)
     {
-        System.out.printf("Inside processResultFiles. resultsFile.size()=" + resultFiles.size());
         ReadResultFilesTask readResultFilesTask = new ReadResultFilesTask(resultFiles);
+        Label taskMessage = bindTaskMessageToStatus(readResultFilesTask);
 
-        // hook up status line on the GUI to the task message
-        Label taskMessage = new Label();
-        taskMessage.textProperty().addListener((observable, oldValue, newValue) -> { gcslAppController.setStatus(newValue); });
-        taskMessage.textProperty().bind(readResultFilesTask.messageProperty());
+        readResultFilesTask.setOnSucceeded(event -> onTaskSuccess(readResultFilesTask, taskMessage));
+        readResultFilesTask.setOnFailed(event -> onTaskFailure(readResultFilesTask));
 
-        readResultFilesTask.setOnSucceeded(e -> {
-            List<MeetResults> meetResults = readResultFilesTask.getValue();
-
-            ResultsToDbTask dbTask = new ResultsToDbTask(dbConn, meetResults);
-            taskMessage.textProperty().unbind();
-            taskMessage.textProperty().bind(dbTask.messageProperty());
-
-            Thread backgroundThread = new Thread(dbTask);
-            backgroundThread.setDaemon(true);
-            backgroundThread.start();
-        });
-
-        // start the roster reading task
-        Thread backgroundThread = new Thread(readResultFilesTask);
-        backgroundThread.setDaemon(true);
-        backgroundThread.start();
+        startTask(readResultFilesTask);
     }
 
 
@@ -150,33 +230,13 @@ public class GcslApp extends Application
     // be added to the DB.
     private void processRosterFiles(List<ProcessArchiveItem> rosterFiles)
     {
-        // create the background task
         ReadRosterFilesTask readRosterFilesTask = new ReadRosterFilesTask(rosterFiles);
+        Label taskMessage = bindTaskMessageToStatus(readRosterFilesTask);
 
-        // hook up status line on the GUI to the task message
-        Label taskMessage = new Label();
-        taskMessage.textProperty().addListener((observable, oldValue, newValue) -> { gcslAppController.setStatus(newValue); });
-        taskMessage.textProperty().bind(readRosterFilesTask.messageProperty());
+        readRosterFilesTask.setOnSucceeded(event -> onTaskSuccess(readRosterFilesTask, taskMessage));
+        readRosterFilesTask.setOnFailed(event -> onTaskFailure(readRosterFilesTask));
 
-        // if reading of the roster files from archive items is successful,
-        // add the teams/athletes to the DB.
-        readRosterFilesTask.setOnSucceeded(e -> {
-            List<Team> teamsFromArchive = readRosterFilesTask.getValue();
-            System.out.printf("ReadRosterFilesTask return %d teams. %n", teamsFromArchive.size());
-
-            RostersToDbTask dbTask = new RostersToDbTask(dbConn, teamsFromArchive);
-            taskMessage.textProperty().unbind();
-            taskMessage.textProperty().bind(dbTask.messageProperty());
-
-            Thread backgroundThread = new Thread(dbTask);
-            backgroundThread.setDaemon(true);
-            backgroundThread.start();
-        });
-
-        // start the roster reading task
-        Thread backgroundThread = new Thread(readRosterFilesTask);
-        backgroundThread.setDaemon(true);
-        backgroundThread.start();
+        startTask(readRosterFilesTask);
     }
 
 
@@ -243,5 +303,13 @@ public class GcslApp extends Application
         }
 
         return rosterFiles;
+    }
+
+
+    private void startTask(Task task)
+    {
+        Thread backgroundThread = new Thread(task);
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
     }
 }
