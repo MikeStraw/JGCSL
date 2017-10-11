@@ -30,10 +30,9 @@ public class ReadResultFilesTask extends Task<List<MeetResults>>
     @Override
     protected List<MeetResults> call() throws Exception
     {
-        List<MeetResults> results = new Vector<>();
-
         int curItem  = 0;
         int numItems = archiveItems.size();
+        List<MeetResults> results = new Vector<>();
         System.out.printf("Inside ReadResultFilesTask::call(). archiveItems.size()=%d %n", archiveItems.size());
 
         for (ProcessArchiveItem archiveItem : archiveItems)
@@ -139,7 +138,7 @@ public class ReadResultFilesTask extends Task<List<MeetResults>>
     private MeetResults readResultFile(String resultFilePath,
                                        ProcessArchiveItem.Scenario scenario) throws SdifException
     {
-        SdifFileDescription.SdifFileType fileTypeExpected = SdifFileDescription.SdifFileType.UNKNOWN;
+        SdifFileDescription.SdifFileType fileTypeExpected;
 
         switch (scenario) {
             case MEET_RESULTS:     { fileTypeExpected = SdifFileDescription.SdifFileType.MEET_RESULTS;  break;}

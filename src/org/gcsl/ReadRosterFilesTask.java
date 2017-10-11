@@ -33,10 +33,9 @@ public class ReadRosterFilesTask extends Task<List<Team>>
     @Override
     protected List<Team> call() throws Exception
     {
-        List<Team> teams = new Vector<>();
-
         int curItem  = 0;
         int numItems = archiveItems.size();
+        List<Team> teams = new Vector<>();
         System.out.printf("Inside ReadRosterFilesTask::call(). archiveItems.size()=%d %n", archiveItems.size());
 
         for (ProcessArchiveItem archiveItem : archiveItems)
@@ -44,9 +43,8 @@ public class ReadRosterFilesTask extends Task<List<Team>>
             if (isCancelled())  { break; }
             curItem++;
 
-            String archiveFilePath = archiveItem.getDirectory() + File.separator + archiveItem.getName();
-            Team csvTeam = readRosterArchive(archiveFilePath);
-            teams.add(csvTeam);
+            Team sdifTeam = readRosterArchive(archiveItem);
+            teams.add(sdifTeam);
 
             updateMessage("Processing archive: " + archiveItem.getName());
             updateProgress(curItem, numItems);
@@ -57,26 +55,32 @@ public class ReadRosterFilesTask extends Task<List<Team>>
     }
 
 
-    // Extract the CL2 or HY3 file from the archive file.  Return the path to the extracted file.
-    // Throw an SdifException if the archive does not contain a CL2 or HY3 file.
-    private String extractRosterFromArchive(String archivePath) throws SdifException, IOException
+    // Extracts the roster file from the archive.  Return the path to the extracted archive file.
+    private String extractRosterArchiveFile(ProcessArchiveItem archiveItem) throws IOException, SdifException
     {
-        List<String> archiveContents = Utils.getFileNamesFromArchive(archivePath);
+        String []archiveContents = orderRosterFiles(archiveItem.getContents());
+        String   archiveFilePath = archiveItem.getDirectory() + File.separator + archiveItem.getName();
+        String   rosterFilePath;
 
-        // look for CL2 file first, then HY3
-        for (String fileName : archiveContents) {
-            if (fileName.toLowerCase().endsWith(".cl2")) {
-                return Utils.getFileFromArchive(archivePath, fileName);
-            }
+        // Extract the results file from the archive
+        Utils.ARCHIVE_FILE_TYPE fileType = Utils.getArchiveFileType(archiveFilePath);
+        switch (fileType) {
+            case ZIP : rosterFilePath = Utils.getFileFromArchive(archiveFilePath, archiveContents[0]);
+                break;
+            case SD3:  rosterFilePath = archiveFilePath;
+                break;
+            default:   throw new SdifException("Unknown roster file archive.  Filepath=" + archiveFilePath);
         }
 
-        for (String fileName : archiveContents) {
-            if (fileName.toLowerCase().endsWith(".hy3")) {
-                return Utils.getFileFromArchive(archivePath, fileName);
-            }
-        }
+        return rosterFilePath;
+    }
 
-        throw new SdifException("Roster archive does not contain a .cl2 or hy3 file.");
+
+    // Order the archive content based on whether to prioritize .CL2 files over .HY3 files.
+    private String [] orderRosterFiles(String archiveContents)
+    {
+        // TODO: really should check a config entry, for now just assume that we want .CL2 entries before .HY3
+        return archiveContents.split(", ");
     }
 
 
@@ -117,28 +121,21 @@ public class ReadRosterFilesTask extends Task<List<Team>>
     // Read a Roster Archive file and return a Team object representing the team roster.
     // Throw an IOException if there are errors reading from the roster archive file.
     // Throw an SdifException if the roster file contents are not valid.
-    private Team readRosterArchive(String archiveFile) throws SdifException, IOException
+    private Team readRosterArchive(ProcessArchiveItem archiveItem) throws SdifException, IOException
     {
-        String  rosterFilePath;
-        boolean rosterFileIsTemp = false;
-        SdifFileDescription.SdifFileType rosterFileType;
-        System.out.println("processing archive file: " + archiveFile);
+        String  archiveFilePath  = archiveItem.getDirectory() + File.separator + archiveItem.getName();
+        String  rosterFilePath   = extractRosterArchiveFile(archiveItem);
+        boolean rosterFileIsTemp = ! archiveFilePath.equals(rosterFilePath);  // not equal means is a temp file
 
-        // Check for ZIP archive
-        Utils.ARCHIVE_FILE_TYPE fileType = Utils.getArchiveFileType(archiveFile);
-        switch (fileType) {
-            case ZIP : rosterFilePath = extractRosterFromArchive(archiveFile);
-                rosterFileIsTemp = true;
-                rosterFileType = SdifFileDescription.SdifFileType.VENDOR_DEFINED;
-                break;
-            case SD3:  rosterFilePath = archiveFile;
-                rosterFileType = SdifFileDescription.SdifFileType.MEET_REGISTRATION;
-                break;
-            default:   throw new SdifException("Unknown roster file archive.  Filepath=" + archiveFile);
+        Utils.ARCHIVE_FILE_TYPE archiveFileType  = Utils.getArchiveFileType(archiveFilePath);
+        SdifFileDescription.SdifFileType rosterFileTypeExpected;
+        switch (archiveFileType) {
+            case ZIP : rosterFileTypeExpected = SdifFileDescription.SdifFileType.VENDOR_DEFINED;     break;
+            case SD3:  rosterFileTypeExpected = SdifFileDescription.SdifFileType.MEET_REGISTRATION;  break;
+            default:   throw new SdifException("Unknown roster file archive.  Filepath=" + archiveFilePath);
         }
 
-        Team team = readRosterFile(rosterFilePath, rosterFileType);
-
+        Team team = readRosterFile(rosterFilePath, rosterFileTypeExpected);
         if (rosterFileIsTemp) {
             Files.deleteIfExists(Paths.get(rosterFilePath));
         }

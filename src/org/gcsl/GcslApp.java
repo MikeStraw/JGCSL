@@ -3,7 +3,6 @@ package org.gcsl;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
-import javafx.concurrent.WorkerStateEvent;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -51,7 +50,6 @@ public class GcslApp extends Application
     // for athletes that have results but are not found in a team roster.
     public void processMeetResults()
     {
-        System.out.printf("Inside processMeetResults.");
         List<ProcessArchiveItem> resultFiles = showProcessResultsDialog();
         processResultFiles(resultFiles);
     }
@@ -74,7 +72,7 @@ public class GcslApp extends Application
     private Label bindTaskMessageToStatus(Task task)
     {
         Label taskMessageLabel = new Label();
-        taskMessageLabel.textProperty().addListener((observable, oldValue, newValue) -> { gcslAppController.setStatus(newValue); });
+        taskMessageLabel.textProperty().addListener((observable, oldValue, newValue) ->  gcslAppController.setStatus(newValue) );
         taskMessageLabel.textProperty().bind(task.messageProperty());
 
         return taskMessageLabel;
@@ -137,12 +135,7 @@ public class GcslApp extends Application
         String errMsg = "Task Failure:  " + task.getException();
         System.err.println(errMsg);
 
-        Platform.runLater(new Runnable(){
-            @Override
-            public void run() {
-                gcslAppController.setStatus(errMsg);
-            }
-        });
+        Platform.runLater( () -> gcslAppController.setStatus(errMsg) );
     }
 
     // The task OnFailure method that puts the tasks' exception message onto the status line
