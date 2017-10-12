@@ -3,11 +3,13 @@ package org.gcsl;
 import javafx.concurrent.Task;
 import org.gcsl.db.AthleteDbo;
 import org.gcsl.db.MeetDbo;
+import org.gcsl.db.OrphanDbo;
 import org.gcsl.db.TeamDbo;
 import org.gcsl.model.Athlete;
 import org.gcsl.model.Meet;
 import org.gcsl.model.MeetResults;
 import org.gcsl.model.Team;
+import org.gcsl.util.Utils;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -29,6 +31,7 @@ public class ResultsToDbTask extends Task<Void>
     protected Void call() throws Exception
     {
         int curItem = 0;
+        int existingMeetId = Utils.INVALID_ID;
         int numItems = meetResults.size();
         System.out.printf("Inside ResultsToDbTask, meetResults.size()=%d. %n", meetResults.size());
 
@@ -37,6 +40,8 @@ public class ResultsToDbTask extends Task<Void>
                 break;
             }
             curItem++;
+            updateMessage("Processing results for meet: " + meet.getName());
+            updateProgress(curItem, numItems);
 
             // NOTE:  different result types may only have 1 team
             List<Team> teams = meet.getTeams();
@@ -48,10 +53,8 @@ public class ResultsToDbTask extends Task<Void>
 
             Meet dbMeet = MeetDbo.findByTeams(dbConn, meet);
             if (dbMeet != null) {
-                // Found existing results - Probably should remove them and continue
-                System.err.println("Error:  Meet already found in DB... exiting for now. ");
-                updateMessage("Error:  Meet already found in DB... exiting for now. ");
-                return null;
+                existingMeetId = dbMeet.getId();
+                removeResults(dbMeet);
             }
 
             if (! updateTeamIds(teams)) {
@@ -61,18 +64,30 @@ public class ResultsToDbTask extends Task<Void>
             }
             List<Athlete> orphans = updateAthlteIds(teams);
             meet.addOrphans(orphans);
-
             System.out.printf("Inserting meet into the DB with %d orphans %n", orphans.size());
-            int meetId = MeetDbo.insert(dbConn, meet);
-            System.out.printf("Inserted meet %d into the DB.", meetId);
 
-            updateMessage("Processing results for meet: " + meet.getName());
-            updateProgress(curItem, numItems);
+            if (existingMeetId != Utils.INVALID_ID) {
+                MeetDbo.update(dbConn, meet, existingMeetId);
+                System.out.printf("Updated meet %d in the DB.", existingMeetId);
+            }
+            else {
+                int meetId = MeetDbo.insert(dbConn, meet);
+                System.out.printf("Inserted meet %d into the DB.", meetId);
+            }
         }
 
         updateMessage("Successfully processed " + meetResults.size() + " meet results to the DB.");
         return null;
     }
+
+
+    // Remove the results associated with a meet.
+    private void removeResults(Meet meet) throws SQLException
+    {
+        MeetDbo.removeResults(dbConn, meet.getId());
+        OrphanDbo.removeOrphans(dbConn, meet.getId());
+    }
+
 
     // Update the athletes with their DB IDs.  Any athletes not found in the DB are returned
     // in the orphan list.

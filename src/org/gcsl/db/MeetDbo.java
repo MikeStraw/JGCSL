@@ -68,6 +68,37 @@ public class MeetDbo
     }
 
 
+    // Remove the athletes associated with a particular meet
+    public static void removeResults(Connection db, int meetId) throws SQLException
+    {
+        String sql = "DELETE FROM Athlete_Meet WHERE meet_id = ?";
+
+        if (meetId != Utils.INVALID_ID) {
+            try (PreparedStatement pstmt = db.prepareStatement(sql)){
+                pstmt.setInt(1, meetId);
+                pstmt.executeUpdate();
+            }
+        }
+    }
+
+
+    // Update the meet information, athlete-meet and orphan data into the DB.
+    // NOTE:  only the file_date can be updated.  last_update is automatically updated.
+    public static void update(Connection db, MeetResults meet, int meetId) throws SQLException
+    {
+        String sql = "UPDATE Meets SET file_date = ? WHERE id = ? ";
+
+        try (PreparedStatement pstmt = db.prepareStatement(sql)){
+            pstmt.setString(1, meet.getResultsFileDate());
+            pstmt.setInt(2, meetId);
+
+            pstmt.executeUpdate();
+            OrphanDbo.insert(db, meet.getOrphans(), meetId);
+            creditAthletesForMeet(db, meet, meetId);
+        }
+    }
+
+
     // Give all the athletes from the meet credit by creating an entry in the Athlete-Meet table.
     // Throw an SQLException on error.
     private static void creditAthletesForMeet(Connection db, MeetResults meetResults, int meetId) throws SQLException
@@ -99,7 +130,7 @@ public class MeetDbo
 
     private static Meet findMeetByTeamIds(Connection db, int id1, int id2, LocalDate meetDate) throws SQLException
     {
-        Meet   meet = null;
+        Meet   meet;
         String meetDateStr = meetDate.format( DateTimeFormatter.ofPattern("yyyy-MM-dd") );
         String sql = "SELECT * FROM Meets WHERE team1_id = ? AND team2_id = ? AND meet_date = ?";
 

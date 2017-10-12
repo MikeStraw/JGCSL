@@ -5,11 +5,15 @@ import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.gcsl.db.MeetDbo;
+import org.gcsl.model.Meet;
 import org.gcsl.model.MeetResults;
 import org.gcsl.model.ProcessArchiveItem;
 import org.gcsl.model.Team;
@@ -20,9 +24,7 @@ import org.gcsl.view.ProcessRosterDialogController;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.*;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 public class GcslApp extends Application
 {
@@ -79,6 +81,35 @@ public class GcslApp extends Application
     }
 
 
+    // Check the meet results to see if any of the meets exist already.
+    // Return true if
+    //                 1. none of the meets already exist
+    //                 2. it is OK to update the existing meet results
+    // of false if the new meet results should not be procesed or there is an SQL error.
+    private boolean checkExistingResults(List<MeetResults> meetResults)
+    {
+        List<Integer> existingMeetsIDs = new Vector<>();
+        boolean rc = false;
+
+        try {
+            for (MeetResults meet : meetResults) {
+                Meet dbMeet = MeetDbo.findByTeams(dbConn, meet);
+                if (dbMeet != null) {
+                    existingMeetsIDs.add(dbMeet.getId());
+                }
+            }
+            if (existingMeetsIDs.size() > 0) {
+                String message = "The following meets already exist: " + existingMeetsIDs.toString();
+                rc = showMeetExistsDialog(message);
+            }
+        } catch (SQLException e) {
+            System.err.println("SQL Error checking for meet existance: " + e.getMessage());
+        }
+
+        return rc;
+    }
+
+
     // Connect to the SQLite database and get the version #
     private void connectToDb() throws SQLException
     {
@@ -121,6 +152,7 @@ public class GcslApp extends Application
     }
 
 
+    // Load the configuration information.
     private void loadConfig() throws IOException
     {
         config = new Properties();
@@ -138,6 +170,7 @@ public class GcslApp extends Application
         Platform.runLater( () -> gcslAppController.setStatus(errMsg) );
     }
 
+
     // The task OnFailure method that puts the tasks' exception message onto the status line
     // and rolls back the DB.
     private void onTaskFailureWithRollback(Task task)
@@ -152,30 +185,76 @@ public class GcslApp extends Application
     }
 
 
-    // The task OnSuccess method that kicks off the tasks that adds the meet results to the DB
-    private void onTaskSuccess(ReadResultFilesTask task, Label taskMessage)
+    // Generic DB task success method that commits the DB and turns auto-commit back on.
+    private void onTaskSuccessCommit()
     {
-        List<MeetResults> meetResults = task.getValue();
-        ResultsToDbTask dbTask = new ResultsToDbTask(dbConn, meetResults);
-
         try {
-            dbConn.setAutoCommit(false);  // for performance reasons
+            dbConn.commit();
+            dbConn.setAutoCommit(true);
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
 
-        dbTask.setOnSucceeded(event -> onTaskSuccessCommit() );
-        dbTask.setOnFailed(event -> onTaskFailureWithRollback(dbTask));
 
-        taskMessage.textProperty().unbind();
-        taskMessage.textProperty().bind(dbTask.messageProperty());
+    // Process a list of meet result files.  Meets and athlete results identified
+    // in the meet result files will be added to the DB.
+    private void processResultFiles(List<ProcessArchiveItem> resultFiles)
+    {
+        ReadResultFilesTask readResultFilesTask = new ReadResultFilesTask(resultFiles);
+        Label taskMessage = bindTaskMessageToStatus(readResultFilesTask);
 
-        startTask(dbTask);
+        readResultFilesTask.setOnSucceeded(event -> runResultsToDbTask(readResultFilesTask, taskMessage));
+        readResultFilesTask.setOnFailed(event -> onTaskFailure(readResultFilesTask));
+
+        startTask(readResultFilesTask);
+    }
+
+
+    // Process a list of roster files.  Teams and athletes identified in the roster files will
+    // be added to the DB.
+    private void processRosterFiles(List<ProcessArchiveItem> rosterFiles)
+    {
+        ReadRosterFilesTask readRosterFilesTask = new ReadRosterFilesTask(rosterFiles);
+        Label taskMessage = bindTaskMessageToStatus(readRosterFilesTask);
+
+        readRosterFilesTask.setOnSucceeded(event -> runRostersToDbTask(readRosterFilesTask, taskMessage));
+        readRosterFilesTask.setOnFailed(event -> onTaskFailure(readRosterFilesTask));
+
+        startTask(readRosterFilesTask);
+    }
+
+
+    // Run a task to add the meet results to the DB.
+    private void runResultsToDbTask(ReadResultFilesTask task, Label taskMessage)
+    {
+        List<MeetResults> meetResults = task.getValue();
+
+        if (! checkExistingResults(meetResults)) {
+            gcslAppController.setStatus("Process Meet Results cancelled.");
+        }
+        else {
+            ResultsToDbTask dbTask = new ResultsToDbTask(dbConn, meetResults);
+
+            try {
+                dbConn.setAutoCommit(false);  // for performance reasons
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            dbTask.setOnSucceeded(event -> onTaskSuccessCommit() );
+            dbTask.setOnFailed(event -> onTaskFailureWithRollback(dbTask));
+
+            taskMessage.textProperty().unbind();
+            taskMessage.textProperty().bind(dbTask.messageProperty());
+
+            startTask(dbTask);
+        }
     }
 
 
     // The task OnSuccess method that kicks off the task that adds the teams/rosters to the DB.
-    private void onTaskSuccess(ReadRosterFilesTask task, Label taskMessage)
+    private void runRostersToDbTask(ReadRosterFilesTask task, Label taskMessage)
     {
         List<Team> teamsFromArchive = task.getValue();
         RostersToDbTask dbTask = new RostersToDbTask(dbConn, teamsFromArchive);
@@ -196,40 +275,14 @@ public class GcslApp extends Application
     }
 
 
-    private void onTaskSuccessCommit()
+    private boolean showMeetExistsDialog(String message)
     {
-        try {
-            dbConn.commit();
-            dbConn.setAutoCommit(true);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Meet Results Exist");
+        alert.setContentText(message + ".  Do you want to continue?");
 
-
-    private void processResultFiles(List<ProcessArchiveItem> resultFiles)
-    {
-        ReadResultFilesTask readResultFilesTask = new ReadResultFilesTask(resultFiles);
-        Label taskMessage = bindTaskMessageToStatus(readResultFilesTask);
-
-        readResultFilesTask.setOnSucceeded(event -> onTaskSuccess(readResultFilesTask, taskMessage));
-        readResultFilesTask.setOnFailed(event -> onTaskFailure(readResultFilesTask));
-
-        startTask(readResultFilesTask);
-    }
-
-
-    // Process a list of roster files.  Teams and athletes identified in the roster files will
-    // be added to the DB.
-    private void processRosterFiles(List<ProcessArchiveItem> rosterFiles)
-    {
-        ReadRosterFilesTask readRosterFilesTask = new ReadRosterFilesTask(rosterFiles);
-        Label taskMessage = bindTaskMessageToStatus(readRosterFilesTask);
-
-        readRosterFilesTask.setOnSucceeded(event -> onTaskSuccess(readRosterFilesTask, taskMessage));
-        readRosterFilesTask.setOnFailed(event -> onTaskFailure(readRosterFilesTask));
-
-        startTask(readRosterFilesTask);
+        Optional<ButtonType> result = alert.showAndWait();
+        return (result.get() == ButtonType.OK);
     }
 
 
