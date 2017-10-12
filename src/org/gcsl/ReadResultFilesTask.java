@@ -1,82 +1,43 @@
 package org.gcsl;
 
-import javafx.concurrent.Task;
 import org.gcsl.model.*;
 import org.gcsl.sdif.SdifException;
 import org.gcsl.sdif.SdifFileDescription;
 import org.gcsl.sdif.SdifReader;
 import org.gcsl.sdif.SdifRec;
-import org.gcsl.util.Utils;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Vector;
 
 
-public class ReadResultFilesTask extends Task<List<MeetResults>>
+class ReadResultFilesTask extends ReadSdifArchiveTask<MeetResults>
 {
-    private List<ProcessArchiveItem> archiveItems = Collections.emptyList();
-
     ReadResultFilesTask(List<ProcessArchiveItem> archiveFileItems)
     {
-        archiveItems = archiveFileItems;
+        super(archiveFileItems);
     }
 
+
+    // Read a Meet Result Archive file and return a MeetResult object.
+    // Throw an IOException if there are errors reading from the result archive file.
+    // Throw an SdifException if the result file contents are not valid.
     @Override
-    protected List<MeetResults> call() throws Exception
+    MeetResults processArchiveItem(ProcessArchiveItem archiveItem) throws SdifException, IOException
     {
-        int curItem  = 0;
-        int numItems = archiveItems.size();
-        List<MeetResults> results = new Vector<>();
-        System.out.printf("Inside ReadResultFilesTask::call(). archiveItems.size()=%d %n", archiveItems.size());
+        String  archiveFilePath  = archiveItem.getDirectory() + File.separator + archiveItem.getName();
+        String  resultFilePath   = extractSdifFileFromArchive(archiveItem);
+        boolean resultFileIsTemp = ! archiveFilePath.equals(resultFilePath);  // not equal means is a temp file
 
-        for (ProcessArchiveItem archiveItem : archiveItems)
-        {
-            if (isCancelled())  { break; }
-            curItem++;
-
-            MeetResults result = readResultArchive(archiveItem);
-            results.add(result);
-
-            updateMessage("Processing archive: " + archiveItem.getName());
-            updateProgress(curItem, numItems);
-        }
-        updateMessage("Result files read successfully.");
-
-        return results;
-    }
-
-
-    // Extracts the results file from the archive.  Return the path to the extracted archive file.
-    private String extractResultsArchiveFile(ProcessArchiveItem archiveItem) throws IOException, SdifException
-    {
-        String []archiveContents = orderResultFiles(archiveItem.getContents());
-        String   archiveFilePath = archiveItem.getDirectory() + File.separator + archiveItem.getName();
-        String   resultFilePath;
-
-        // Extract the results file from the archive
-        Utils.ARCHIVE_FILE_TYPE fileType = Utils.getArchiveFileType(archiveFilePath);
-        switch (fileType) {
-            case ZIP : resultFilePath = Utils.getFileFromArchive(archiveFilePath, archiveContents[0]);
-                break;
-            case SD3:  resultFilePath = archiveFilePath;
-                break;
-            default:   throw new SdifException("Unknown roster file archive.  Filepath=" + archiveFilePath);
+        MeetResults meetResults = readResultFile(resultFilePath, archiveItem.getScenarioType());
+        if (resultFileIsTemp) {
+            Files.deleteIfExists(Paths.get(resultFilePath));
         }
 
-        return resultFilePath;
-    }
-
-    // Order the archive content based on whether to prioritize .CL2 files over .HY3 files.
-    private String [] orderResultFiles(String archiveContents)
-    {
-        // TODO: really should check a config entry, for now just assume that we want .CL2 entries before .HY3
-        return archiveContents.split(", ");
+        return meetResults;
     }
 
 
@@ -98,7 +59,6 @@ public class ReadResultFilesTask extends Task<List<MeetResults>>
                               .addTeam(optTeam.get());
                     break;
                 }
-
                 case INDIVIDUAL_EVENT_REC:   // fall through
                 case RELAY_NAME_REC: {
                     Athlete athlete = Athlete.fromSdif(rec);
@@ -106,7 +66,6 @@ public class ReadResultFilesTask extends Task<List<MeetResults>>
                            .addAthlete(athlete);
                     break;
                 }
-
                 default:
                     break;  // don't care about others
             }
@@ -114,24 +73,6 @@ public class ReadResultFilesTask extends Task<List<MeetResults>>
         return optResults;
     }
 
-
-
-    // Read a Meet Result Archive file and return a MeetResult object.
-    // Throw an IOException if there are errors reading from the result archive file.
-    // Throw an SdifException if the result file contents are not valid.
-    private MeetResults readResultArchive(ProcessArchiveItem archiveItem) throws SdifException, IOException
-    {
-        String  archiveFilePath  = archiveItem.getDirectory() + File.separator + archiveItem.getName();
-        String  resultFilePath   = extractResultsArchiveFile(archiveItem);
-        boolean resultFileIsTemp = ! archiveFilePath.equals(resultFilePath);  // not equal means is a temp file
-
-        MeetResults meetResults = readResultFile(resultFilePath, archiveItem.getScenarioType());
-        if (resultFileIsTemp) {
-            Files.deleteIfExists(Paths.get(resultFilePath));
-        }
-
-        return meetResults;
-    }
 
     // Read a result file (CL2, HY3 or SD3) and create a Meet object representing the results of the meet.
     // Throw an SdifException if the result file is not valid.
@@ -157,6 +98,7 @@ public class ReadResultFilesTask extends Task<List<MeetResults>>
 
         return results.get();
     }
+
 
     private List<SdifRec> readResultFile(SdifReader reader, SdifFileDescription.SdifFileType expectedSdifType) throws SdifException
     {
