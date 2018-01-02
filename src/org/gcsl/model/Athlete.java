@@ -13,6 +13,8 @@ public class Athlete
     private String name;                         // Athlete's name (last, first [m])
     private int    teamId = Utils.INVALID_ID;    // ID of team athlete belongs to
 
+    private static final int NO_SHOW_ID = -2;
+
     // Create from individual components
     public Athlete (String name, String gender, String dob)
     {
@@ -34,8 +36,15 @@ public class Athlete
 
     public static Athlete fromSdif(SdifRec sdifRec) throws SdifException
     {
-        return popFromSdifData(sdifRec);
+        return popFromSdifData(sdifRec, false);
     }
+    public static Athlete fromSdifMeetResult(SdifRec sdifRec) throws SdifException
+    {
+        return popFromSdifData(sdifRec, true);
+    }
+
+    // Return true if this athlete was created from a "no show" meet results entry
+    public boolean isNoShow()     { return id == NO_SHOW_ID; }
 
     // ********** Public Getters
     public String getDob()        { return dob; }
@@ -73,7 +82,7 @@ public class Athlete
     }
 
 
-    private static Athlete popFromSdifData(SdifRec rec) throws SdifException
+    private static Athlete popFromSdifData(SdifRec rec, boolean checkForNoShow) throws SdifException
     {
         int dobIdx = -1, genderIdx = -1, nameIdx = -1;
         int dobLen = 8;
@@ -113,7 +122,20 @@ public class Athlete
                 throw new SdifException("Invalid Athlete Data");
             }
 
-            return new Athlete(name, gender, dob);
+            Athlete newAthlete = new Athlete(name, gender, dob);
+
+            // if checking meet results, make sure there is a finals time/points present
+            // rather than an 'NS'.
+            if (checkForNoShow) {
+                int timeIdx = 115;
+                int timeLen = 8;
+                String finalsTime = sdifData.substring(timeIdx, timeIdx+timeLen).trim();
+
+                if (finalsTime.equals("NS")) {
+                    newAthlete.setId(NO_SHOW_ID);
+                }
+            }
+            return newAthlete;
         }
     }
 }

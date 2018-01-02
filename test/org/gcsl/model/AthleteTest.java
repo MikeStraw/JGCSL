@@ -1,5 +1,7 @@
 package org.gcsl.model;
 
+import org.gcsl.sdif.SdifException;
+import org.gcsl.sdif.SdifRec;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -69,5 +71,38 @@ class AthleteTest
         // a1 == a4
         Athlete a4 = new Athlete("John Smith", "M", "2000-01-01", 2);
         assertTrue(athletes.contains(a4));
+    }
+
+    // SDIF processing tests
+    @Test
+    void testMeetResultWithTimeNotNoShow()
+    {
+        String sdifData = "D08        Ertz, Lauren                            A   1120200115FF 1001 71 UN1807122017 1:00.24Y                   1:02.35Y     2 6     3       3  01      NN77\n";
+        SdifRec sdifRec = new SdifRec(sdifData);
+
+        try {
+            Athlete noShowAthlete = Athlete.fromSdifMeetResult(sdifRec);
+            assertFalse(noShowAthlete.isNoShow());
+
+        } catch (SdifException e) {
+            e.printStackTrace();
+            assertTrue(false);
+        }
+    }
+
+    @Test
+    void testNoShowMeetResult()
+    {
+        String sdifData = "D08        Bucher, Josh                            A   0523200413MM   1H  8 UN1407122017 1:23.55Y                        NSY     1 4     0       0  06      NN37\n";
+        SdifRec sdifRec = new SdifRec(sdifData);
+
+        try {
+            Athlete noShowAthlete = Athlete.fromSdifMeetResult(sdifRec);
+            assertTrue(noShowAthlete.isNoShow());
+
+        } catch (SdifException e) {
+            e.printStackTrace();
+            assertTrue(false);
+        }
     }
 }

@@ -7,7 +7,6 @@ import org.gcsl.util.Utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Vector;
 
@@ -16,7 +15,7 @@ import java.util.Vector;
 // When deriving from this class, the processArchiveItem method must be implemented.
 public abstract class ReadSdifArchiveTask<T> extends Task<List<T>>
 {
-    private List<ProcessArchiveItem> archiveItems = Collections.emptyList();
+    private List<ProcessArchiveItem> archiveItems;
 
     ReadSdifArchiveTask(List<ProcessArchiveItem> archiveItems)
     {
@@ -32,8 +31,7 @@ public abstract class ReadSdifArchiveTask<T> extends Task<List<T>>
         List<T> results  = new Vector<>();
         System.out.printf("Inside ReadSdifArchiveTask::call(). archiveItems.size()=%d %n", archiveItems.size());
 
-        for (ProcessArchiveItem archiveItem : archiveItems)
-        {
+        for (ProcessArchiveItem archiveItem : archiveItems) {
             if (isCancelled())  { break; }
             curItem++;
 

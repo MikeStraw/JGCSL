@@ -1,7 +1,5 @@
 package org.gcsl.model;
 
-import org.gcsl.util.Utils;
-
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -9,11 +7,11 @@ import java.util.Vector;
 
 public class MeetResults
 {
-    MeetInfo info;
-    String resultsFileDate;
-    List<Athlete> orphans = new Vector<>();
-    ProcessArchiveItem.Scenario scenario;
-    List<Team> teams = new Vector<>();
+    private MeetInfo info;
+    private String resultsFileDate;
+    private List<Athlete> orphans = new Vector<>();
+    private ProcessArchiveItem.Scenario scenario;
+    private List<Team> teams = new Vector<>();
 
     public MeetResults(MeetInfo meetInfo, ProcessArchiveItem.Scenario resultsType)
     {

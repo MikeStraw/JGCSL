@@ -103,7 +103,7 @@ public class GcslApp extends Application
                 rc = showMeetExistsDialog(message);
             }
         } catch (SQLException e) {
-            System.err.println("SQL Error checking for meet existance: " + e.getMessage());
+            System.err.println("SQL Error checking for meet existence: " + e.getMessage());
         }
 
         return rc;
