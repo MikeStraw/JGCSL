@@ -8,7 +8,7 @@ import org.gcsl.util.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Vector;
+import java.util.ArrayList;
 
 // Abstract class for reading a list of SDIF archive files (ZIP or SD3) and producing
 // a set of result files (List<T>) in a separate task.
@@ -28,7 +28,7 @@ public abstract class ReadSdifArchiveTask<T> extends Task<List<T>>
     {
         int     curItem  = 0;
         int     numItems = archiveItems.size();
-        List<T> results  = new Vector<>();
+        List<T> results  = new ArrayList<>();
         System.out.printf("Inside ReadSdifArchiveTask::call(). archiveItems.size()=%d %n", archiveItems.size());
 
         for (ProcessArchiveItem archiveItem : archiveItems) {

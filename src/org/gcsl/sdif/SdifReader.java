@@ -2,7 +2,7 @@ package org.gcsl.sdif;
 
 import java.io.*;
 import java.util.List;
-import java.util.Vector;
+import java.util.ArrayList;
 
 public class SdifReader
 {
@@ -54,7 +54,7 @@ public class SdifReader
     public List<SdifRec> readFile() throws SdifException
     {
         String line;
-        Vector<SdifRec> recs = new Vector<>();
+        ArrayList<SdifRec> recs = new ArrayList<>();
 
         try {
             while ( (line = sdifReader.readLine()) != null) {

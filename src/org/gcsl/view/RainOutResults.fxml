@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ButtonBar?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane prefHeight="300.0" prefWidth="400.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.gcsl.view.RainOutResultsController">
+   <children>
+      <BorderPane layoutX="100.0" layoutY="43.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <center>
+            <ListView fx:id="rainOutEntryFiles" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+         </center>
+         <bottom>
+            <VBox BorderPane.alignment="CENTER">
+               <children>
+                  <Label fx:id="pairings">
+                     <VBox.margin>
+                        <Insets bottom="10.0" left="10.0" />
+                     </VBox.margin>
+                  </Label>
+                  <ButtonBar prefHeight="40.0" prefWidth="200.0">
+                    <buttons>
+                      <Button fx:id="pairBtn" mnemonicParsing="false" onAction="#handlePairButtonClick" text="Pair Up" ButtonBar.buttonData="LEFT" />
+                        <Button fx:id="closeBtn" mnemonicParsing="false" onAction="#handleCloseButtonClick" text="Close" ButtonBar.buttonData="RIGHT" />
+                        <Button fx:id="resetBtn" mnemonicParsing="false" onAction="#handleResetButtonClick" text="Reset" />
+                    </buttons>
+                     <padding>
+                        <Insets right="20.0" />
+                     </padding>
+                  </ButtonBar>
+               </children>
+            </VBox>
+         </bottom>
+      </BorderPane>
+   </children>
+</AnchorPane>

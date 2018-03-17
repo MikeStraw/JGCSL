@@ -37,6 +37,7 @@ public class GcslAppController
     @FXML private void handleReportsOrphans(/* ActionEvent event */)
     {
         System.out.println("Reports Orphans Clicked.");
+        app.reportOrphans();
     }
 
     @FXML private void initialize()

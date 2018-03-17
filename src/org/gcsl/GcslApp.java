@@ -8,6 +8,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
@@ -20,6 +21,7 @@ import org.gcsl.model.Team;
 import org.gcsl.view.GcslAppController;
 import org.gcsl.view.ProcessResultsDialogController;
 import org.gcsl.view.ProcessRosterDialogController;
+import org.gcsl.view.RainOutResultsController;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -68,6 +70,11 @@ public class GcslApp extends Application
         processRosterFiles(rosterFiles);
     }
 
+    public void reportOrphans()
+    {
+
+    }
+
 
     // ********************     Private Methods
     // bind the updateMessage calls from the task to the App's status label
@@ -88,7 +95,7 @@ public class GcslApp extends Application
     // of false if the new meet results should not be procesed or there is an SQL error.
     private boolean checkExistingResults(List<MeetResults> meetResults)
     {
-        List<Integer> existingMeetsIDs = new Vector<>();
+        List<Integer> existingMeetsIDs = new ArrayList<>();
         boolean rc = false;
 
         try {
@@ -196,6 +203,27 @@ public class GcslApp extends Application
         }
     }
 
+    // Go through the list of incoming MeetResults and "pair up" rain out
+    // result entries.  The "paired up" results will be collapsed into a
+    // single MeetResult with both teams.
+    private List<MeetResults> pairRainOutEntries(List<MeetResults> inResults)
+    {
+        long numRainouts = inResults.stream()
+                                    .filter( meet -> meet.getResultsScenario() == ProcessArchiveItem.Scenario.RAIN_OUT_ENTRIES)
+                                    .count();
+        System.out.println("Number of rainout entries is: " + numRainouts);
+
+        List<MeetResults> outResults;
+        if (numRainouts == 0) {
+            outResults = inResults;
+        }
+        else {
+            outResults = showRainOutDialog(inResults);
+        }
+
+        return outResults;
+    }
+
 
     // Process a list of meet result files.  Meets and athlete results identified
     // in the meet result files will be added to the DB.
@@ -229,6 +257,10 @@ public class GcslApp extends Application
     private void runResultsToDbTask(ReadResultFilesTask task, Label taskMessage)
     {
         List<MeetResults> meetResults = task.getValue();
+
+        // fix up the meet results so that rain out entries are combined
+        // into a single MeetResults entry
+        meetResults = pairRainOutEntries(meetResults);
 
         if (! checkExistingResults(meetResults)) {
             gcslAppController.setStatus("Process Meet Results cancelled.");
@@ -349,6 +381,41 @@ public class GcslApp extends Application
         }
 
         return rosterFiles;
+    }
+
+
+    // Show the Rain Out Results dialog so that we can pair up rain out entries
+    // into a single MeetResult object.  Return the MeetResults list
+    // with the pairs of rainout entries collapsed.
+    private List<MeetResults> showRainOutDialog(List<MeetResults> meetResults)
+    {
+        List<MeetResults> updatedMeetResults;
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(GcslApp.class.getResource("view/RainOutResults.fxml"));
+            AnchorPane page = loader.load();
+
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Rain Out Results");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(primaryStage);
+            Scene scene = new Scene(page);
+            dialogStage.setScene(scene);
+
+            RainOutResultsController controller = loader.getController();
+            controller.setDialogStage(dialogStage);
+            controller.setMeetResultsList(meetResults);
+
+            dialogStage.showAndWait();
+
+            updatedMeetResults = controller.getMeetResultsList();
+        }
+        catch (IOException e) {
+            updatedMeetResults = meetResults;
+            e.printStackTrace();
+        }
+
+        return updatedMeetResults;
     }
 
 

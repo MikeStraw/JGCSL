@@ -1,17 +1,17 @@
 package org.gcsl.model;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Vector;
 
 public class MeetResults
 {
     private MeetInfo info;
     private String resultsFileDate;
-    private List<Athlete> orphans = new Vector<>();
+    private List<Athlete> orphans = new ArrayList<>();
     private ProcessArchiveItem.Scenario scenario;
-    private List<Team> teams = new Vector<>();
+    private List<Team> teams = new ArrayList<>();
 
     public MeetResults(MeetInfo meetInfo, ProcessArchiveItem.Scenario resultsType)
     {

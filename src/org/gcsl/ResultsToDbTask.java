@@ -14,7 +14,7 @@ import org.gcsl.util.Utils;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Vector;
+import java.util.ArrayList;
 
 public class ResultsToDbTask extends Task<Void>
 {
@@ -93,10 +93,10 @@ public class ResultsToDbTask extends Task<Void>
     // in the orphan list.
     private List<Athlete> updateAthlteIds(List<Team> teams) throws SQLException
     {
-        List<Athlete> orphans = new Vector<>();
+        List<Athlete> orphans = new ArrayList<>();
 
         for (Team resultsTeam : teams) {
-            List<Athlete> newOrphans = new Vector<>();
+            List<Athlete> newOrphans = new ArrayList<>();
 
             for (Athlete athlete : resultsTeam.getAthletes()) {
                 Athlete dbAthlete = AthleteDbo.find(dbConn, athlete);
