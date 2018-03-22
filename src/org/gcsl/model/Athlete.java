@@ -111,7 +111,7 @@ public class Athlete
             throw new SdifException("Invalid SDIF record type: " + rec.getType());
         }
         else {
-            String dob=null, gender=null, name=null;
+            String dob, gender, name;
 
             String sdifData = rec.getDataBuf();
             dob    = Utils.makeDateString(sdifData.substring(dobIdx, dobIdx+dobLen));

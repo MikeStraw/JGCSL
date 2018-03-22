@@ -11,6 +11,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.gcsl.db.MeetDbo;
@@ -23,6 +24,7 @@ import org.gcsl.view.ProcessResultsDialogController;
 import org.gcsl.view.ProcessRosterDialogController;
 import org.gcsl.view.RainOutResultsController;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.*;
@@ -70,9 +72,40 @@ public class GcslApp extends Application
         processRosterFiles(rosterFiles);
     }
 
+
+    // Report the number of meets per athlete
+    public void reportMeetCount()
+    {
+        File reportsDir = getReportsDirectory(config.getProperty("reports_dir"));
+        if (reportsDir != null) {
+            Reports reports = new Reports(dbConn, reportsDir);
+            try {
+                reports.meetCountReport();
+                gcslAppController.setStatus("Meet count report created successfully.");
+            }
+            catch (Exception ex) {
+                System.err.println("Caught error creating meet count report file: " + ex.getMessage());
+                gcslAppController.setStatus("Error creating Meet Count Report ... ");
+            }
+        }
+    }
+
+    // Report the orphans found in the orphan table
     public void reportOrphans()
     {
+        File reportsDir = getReportsDirectory(config.getProperty("reports_dir"));
+        if (reportsDir != null) {
+            Reports reports = new Reports(dbConn, reportsDir);
+            try {
+                reports.orphanReport();
+                gcslAppController.setStatus("Orphan report created successfully.");
+            }
+            catch (IOException ex) {
+                System.err.println("Caught error creating orphan report file: " + ex.getMessage());
+                gcslAppController.setStatus("Error creating Orphan Report ... ");
+            }
 
+        }
     }
 
 
@@ -141,6 +174,15 @@ public class GcslApp extends Application
             }
         }
         return version;
+    }
+
+
+    private File getReportsDirectory(String initialDir)
+    {
+        DirectoryChooser dc = new DirectoryChooser();
+        dc.setInitialDirectory(new File(initialDir));
+
+        return dc.showDialog(primaryStage);
     }
 
 

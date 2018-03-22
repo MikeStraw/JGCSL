@@ -32,6 +32,7 @@ public class GcslAppController
     @FXML private void handleReportsMeetCount(/* ActionEvent event */)
     {
         System.out.println("Reports Meet Count Clicked.");
+        app.reportMeetCount();
     }
 
     @FXML private void handleReportsOrphans(/* ActionEvent event */)

@@ -2,7 +2,12 @@ package org.gcsl.db;
 
 import org.gcsl.model.Athlete;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 public class AthleteDbo {
@@ -61,6 +66,28 @@ public class AthleteDbo {
 
         return athleteFromDb;
     }
+
+
+    // get the meets ID associated with this athlete
+    public static List<Integer> getMeetIds(Connection db, Athlete athlete) throws SQLException
+    {
+        List<Integer> meetIds = new ArrayList<>();
+        String sql = "SELECT meet_id FROM Athlete_Meet WHERE athlete_id = ?";
+
+        try (PreparedStatement pstmt = db.prepareStatement(sql)) {
+
+            pstmt.setInt(1, athlete.getId());
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                meetIds.add( rs.getInt("meet_id") );
+            }
+            rs.close();
+        }
+
+        return meetIds;
+    }
+
 
     // insert a single athlete into the DB.
     public static void insert(Connection db, Athlete athlete) throws SQLException

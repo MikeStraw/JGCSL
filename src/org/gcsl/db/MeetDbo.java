@@ -6,11 +6,35 @@ import org.gcsl.util.Utils;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 public class MeetDbo
 {
+    // Find all meets in the DB
+    public static List<Meet> findAll(Connection db)
+    {
+        List<Meet> meets = new ArrayList<>();
+        String sql = "SELECT * FROM Meets";
+
+        try(Statement stmt = db.createStatement();
+            ResultSet rs   = stmt.executeQuery(sql)) {
+
+            Meet meet;
+            while ((meet = makeMeetFromResultSet(rs)) != null) {
+                meets.add(meet);
+            }
+        }
+        catch (SQLException e) {
+            System.err.println("ERROR - finding all meets.");
+            e.printStackTrace();
+        }
+
+        return meets;
+    }
+
+
     // Find the meet in the DB based on the meetId.
     // Returns null if meet is not found.
     public static Meet findById(Connection db, int meetId) throws SQLException

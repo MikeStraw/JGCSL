@@ -1,10 +1,8 @@
 package org.gcsl.util;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -29,6 +27,22 @@ public class Utils
         }
 
         return dateStr;
+    }
+
+    // createFileSpec - Create a file spec (full path) given the directory, name, extension and optional date suffix
+    public static String createFileSpec(File dir, String fileName, String extension, Boolean addDateSuffix)
+    {
+        StringBuilder fileSpec = new StringBuilder(dir.toString() + File.separator + fileName);
+
+        if (addDateSuffix) {
+            SimpleDateFormat dateFmt = new SimpleDateFormat("_MM_dd");
+            String dateSuffix        = dateFmt.format(new Date());
+
+            fileSpec.append(dateSuffix);
+        }
+        fileSpec.append("." + extension);
+
+        return fileSpec.toString();
     }
 
 

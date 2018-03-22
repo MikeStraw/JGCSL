@@ -5,16 +5,46 @@ import org.gcsl.model.Team;
 import org.gcsl.util.Utils;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class TeamDbo {
 
 
+    // Find the team in the DB by either team code or team ID
     public static Team find(Connection db, Team team) throws SQLException
     {
         if (team.getId() != Utils.INVALID_ID)  return findById(db, team.getId());
         else                                   return findByCode(db, team.getCode());
+    }
+
+
+    // Find all the teams in the DB.
+    public static List<Team> findAll(Connection db)
+    {
+        List<Team> teams = new ArrayList<>();
+        String sql = "SELECT * FROM Teams";
+
+        try (Statement stmt = db.createStatement();
+             ResultSet rs   = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String code = rs.getString("code");
+                int    id   = rs.getInt("id");
+                String name = rs.getString("name");
+                String lastUpdate = rs.getString("last_update");
+
+                teams.add(new Team(id, code, name, lastUpdate));
+            }
+        }
+        catch (SQLException e) {
+            System.err.println("ERROR - finding all teams.");
+            e.printStackTrace();
+        }
+
+        return teams;
     }
 
 
@@ -32,7 +62,7 @@ public class TeamDbo {
 
             if (rs.next()) {
                 String code = rs.getString("code");
-                int    id = rs.getInt("id");
+                int    id   = rs.getInt("id");
                 String name = rs.getString("name");
                 String lastUpdate = rs.getString("last_update");
 
@@ -59,7 +89,7 @@ public class TeamDbo {
                 ResultSet rs = pstmt.executeQuery();
                 if (rs.next()) {
                     String code = rs.getString("code");
-                    int    id = rs.getInt("id");
+                    int    id   = rs.getInt("id");
                     String name = rs.getString("name");
                     String lastUpdate = rs.getString("last_update");
 
@@ -101,10 +131,10 @@ public class TeamDbo {
 
                 ResultSet rs = pstmt.executeQuery();
                 while (rs.next()) {
-                    String dob = rs.getString("dob");
+                    String dob    = rs.getString("dob");
                     String gender = rs.getString("gender");
-                    int    id = rs.getInt("id");
-                    String name = rs.getString("name");
+                    int    id     = rs.getInt("id");
+                    String name   = rs.getString("name");
                     String lastUpdate = rs.getString("last_update");
 
                     athletes.add(new Athlete(id, name, gender, dob, teamId, lastUpdate));
