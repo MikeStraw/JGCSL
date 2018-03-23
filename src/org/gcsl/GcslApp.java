@@ -19,10 +19,7 @@ import org.gcsl.model.Meet;
 import org.gcsl.model.MeetResults;
 import org.gcsl.model.ProcessArchiveItem;
 import org.gcsl.model.Team;
-import org.gcsl.view.GcslAppController;
-import org.gcsl.view.ProcessResultsDialogController;
-import org.gcsl.view.ProcessRosterDialogController;
-import org.gcsl.view.RainOutResultsController;
+import org.gcsl.view.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -57,7 +54,9 @@ public class GcslApp extends Application
     public void processMeetResults()
     {
         List<ProcessArchiveItem> resultFiles = showProcessResultsDialog();
-        processResultFiles(resultFiles);
+        if (resultFiles.size() > 0) {
+            processResultFiles(resultFiles);
+        }
     }
 
 
@@ -69,7 +68,17 @@ public class GcslApp extends Application
     public void processRosters()
     {
         List<ProcessArchiveItem> rosterFiles = showProcessRosterDialog();
-        processRosterFiles(rosterFiles);
+        if (rosterFiles.size() > 0 ) {
+            processRosterFiles(rosterFiles);
+        }
+    }
+
+
+    // Report the championship entry exceptions
+    public void reportChampsExceptions()
+    {
+        System.out.println("reportChampsExceptions");
+        showChampsExceptionDialog();
     }
 
 
@@ -77,7 +86,10 @@ public class GcslApp extends Application
     public void reportMeetCount()
     {
         File reportsDir = getReportsDirectory(config.getProperty("reports_dir"));
-        if (reportsDir != null) {
+        if (reportsDir == null) {
+            gcslAppController.setStatus("Report Meet Count cancelled.");
+        }
+        else {
             Reports reports = new Reports(dbConn, reportsDir);
             try {
                 reports.meetCountReport();
@@ -94,7 +106,10 @@ public class GcslApp extends Application
     public void reportOrphans()
     {
         File reportsDir = getReportsDirectory(config.getProperty("reports_dir"));
-        if (reportsDir != null) {
+        if (reportsDir == null) {
+            gcslAppController.setStatus("Report Orphans cancelled.");
+        }
+        else {
             Reports reports = new Reports(dbConn, reportsDir);
             try {
                 reports.orphanReport();
@@ -349,6 +364,42 @@ public class GcslApp extends Application
     }
 
 
+    private void showChampsExceptionDialog()
+    {
+        String entriesDir = config.getProperty("entries_dir");
+        String reportsDir = config.getProperty("reports_dir");
+
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(GcslApp.class.getResource("view/ChampsExceptionsDialog.fxml"));
+            VBox page = loader.load();
+
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Champs Exception Dialog");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(primaryStage);
+            Scene scene = new Scene(page);
+            dialogStage.setScene(scene);
+
+            ChampsExceptionsDialogController controller = loader.getController();
+            controller.setDialogStage(dialogStage);
+            controller.setEntriesDir(entriesDir);
+            controller.setReportsDir(reportsDir);
+
+            dialogStage.showAndWait();
+            if (controller.dialogCancelled() == true) {
+                gcslAppController.setStatus("Champs Exception Report cancelled.");
+            }
+            else {
+                gcslAppController.setStatus("Champs Exception Report good to go.");
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
     private boolean showMeetExistsDialog(String message)
     {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -383,7 +434,12 @@ public class GcslApp extends Application
             controller.setResultDir(resultsDir);
 
             dialogStage.showAndWait();
-            resultFiles = controller.getResultFiles();
+            if (controller.dialogCancelled() == true) {
+                gcslAppController.setStatus("Process Meet Results cancelled.");
+            }
+            else {
+                resultFiles = controller.getResultFiles();
+            }
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -416,7 +472,12 @@ public class GcslApp extends Application
             controller.setRosterDir(rosterDir);
 
             dialogStage.showAndWait();
-            rosterFiles = controller.getRosterFiles();
+            if (controller.dialogCancelled() == true) {
+                gcslAppController.setStatus("Process Rosters cancelled.");
+            }
+            else {
+                rosterFiles = controller.getRosterFiles();
+            }
         }
         catch (IOException e) {
             e.printStackTrace();

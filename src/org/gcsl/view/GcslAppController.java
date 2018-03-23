@@ -27,6 +27,7 @@ public class GcslAppController
     @FXML private void handleReportsChampsExceptions(/* ActionEvent event */)
     {
         System.out.println("Reports Champs Exceptions Clicked.");
+        app.reportChampsExceptions();
     }
 
     @FXML private void handleReportsMeetCount(/* ActionEvent event */)

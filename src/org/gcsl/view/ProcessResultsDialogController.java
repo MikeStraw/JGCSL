@@ -38,6 +38,7 @@ public class ProcessResultsDialogController
     @FXML private TableColumn<ProcessArchiveItem, Boolean> selectedColumn;
 
     private boolean archiveDirIsDirty = false;
+    private boolean dialogCancelled = true;
     private Stage dialogStage;
     private final ObservableList<ProcessArchiveItem> archiveItemsList = FXCollections.observableArrayList();
     private List<ProcessArchiveItem> resultFiles = Collections.emptyList();
@@ -45,6 +46,7 @@ public class ProcessResultsDialogController
     // ********************************************************************************
     // ***************     Public Methods
     // ********************************************************************************
+    public boolean dialogCancelled()                  { return dialogCancelled; }
     public List<ProcessArchiveItem> getResultFiles()  { return resultFiles; }
     public void setDialogStage(Stage stage)           { dialogStage = stage; }
     public void setResultDir(String dir)              { archiveDir.setText(dir); }
@@ -85,12 +87,13 @@ public class ProcessResultsDialogController
     }
     @FXML private void handleCancelButtonClick()
     {
-        resultFiles = Collections.emptyList();
+        dialogCancelled = true;
         dialogStage.close();
     }
 
     @FXML private void handleProcessButtonClick()
     {
+        dialogCancelled = false;
         resultFiles = archiveTable.getItems().stream().filter(t -> t.getSelected()).collect(toList());
         dialogStage.close();
     }

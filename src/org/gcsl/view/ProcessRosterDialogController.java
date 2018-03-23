@@ -38,6 +38,7 @@ public class ProcessRosterDialogController
     @FXML private TableColumn<ProcessArchiveItem, Boolean> selectedColumn;
 
     private boolean archiveDirIsDirty = false;
+    private boolean dialogCancelled = true;
     private Stage dialogStage;
     private final ObservableList<ProcessArchiveItem> archiveItemsList = FXCollections.observableArrayList();
     private List<ProcessArchiveItem> rosterFiles = Collections.emptyList();
@@ -45,6 +46,7 @@ public class ProcessRosterDialogController
     // ********************************************************************************
     // ***************     Public Methods
     // ********************************************************************************
+    public boolean dialogCancelled()                  { return dialogCancelled; }
     public List<ProcessArchiveItem> getRosterFiles()  { return rosterFiles; }
     public void setDialogStage(Stage stage)           { dialogStage = stage; }
     public void setRosterDir(String dir)              { archiveDir.setText(dir); }
@@ -86,12 +88,13 @@ public class ProcessRosterDialogController
     }
     @FXML private void handleCancelButtonClick()
     {
-        rosterFiles = Collections.emptyList();
+        dialogCancelled = true;
         dialogStage.close();
     }
 
     @FXML private void handleProcessButtonClick()
     {
+        dialogCancelled = false;
         rosterFiles = archiveTable.getItems().stream().filter(t -> t.getSelected()).collect(toList());
         dialogStage.close();
     }
