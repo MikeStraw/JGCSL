@@ -65,7 +65,14 @@ public class Team
     public void setId(int newId)
     {
         id = newId;
-        athletes.forEach(a -> a.setTeamId(id) );
+
+        // It's a "no-no" to update items in a Hash, so we must create a new one
+        Set<Athlete> newSet = new HashSet<>();
+        athletes.forEach(a -> {
+            a.setTeamId(id);
+            newSet.add(a);
+        } );
+        this.athletes = newSet;
     }
 
     @Override

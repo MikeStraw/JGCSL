@@ -1,6 +1,7 @@
 package org.gcsl.db;
 
 import org.gcsl.model.Athlete;
+import org.gcsl.util.Utils;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -61,6 +62,44 @@ public class AthleteDbo {
                 int    teamId = rs.getInt("team_id");
 
                 athleteFromDb = new Athlete(id, name, gender, dob, teamId, lastUpdate);
+            }
+        }
+
+        return athleteFromDb;
+    }
+
+    // find - find the athlete in the DB.  Return null if not found.
+    public static Athlete findByNameOrId(Connection db, Athlete athlete) throws SQLException
+    {
+        Athlete athleteFromDb = null;
+        int     teamId = athlete.getTeamId();
+
+        // If we have a valid ID, use that.  Make sure the team is the same as expected
+        if (athlete.getId() != Utils.INVALID_ID) {
+            athleteFromDb = find(db, athlete.getId());
+
+            if (athleteFromDb != null  &&  athleteFromDb.getTeamId() != teamId) {
+                athleteFromDb = null;
+            }
+        }
+        else {
+            String  query = "SELECT * from Athletes WHERE name=? AND gender=? AND team_id=?";
+            try (PreparedStatement pstmt = db.prepareStatement(query)){
+
+                pstmt.setString(1, athlete.getName());
+                pstmt.setString(2, athlete.getGender());
+                pstmt.setInt(3, teamId);
+
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    String dob    = rs.getString("dob");
+                    String gender = rs.getString("gender");
+                    int    id     = rs.getInt("id");
+                    String name   = rs.getString("name");
+                    String lastUpdate = rs.getString("last_update");
+
+                    athleteFromDb = new Athlete(id, name, gender, dob, teamId, lastUpdate);
+                }
             }
         }
 

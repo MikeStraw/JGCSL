@@ -78,7 +78,8 @@ class ReadResultFilesTask extends ReadSdifArchiveTask<MeetResults>
     //        Pretty much everything is the same.  Meet results do a little extra checking for No Shows, but
     //        that shouldn't matter.
 
-    private Optional<MeetResults> processMeetResults(List<SdifRec> resultRecs) throws SdifException
+    private Optional<MeetResults> processMeetResults(List<SdifRec> resultRecs,
+                                                     ProcessArchiveItem.Scenario resultScenario) throws SdifException
     {
         Optional<MeetResults> optResults = Optional.empty();
         Optional<Relay> optRelay = Optional.empty();
@@ -88,7 +89,7 @@ class ReadResultFilesTask extends ReadSdifArchiveTask<MeetResults>
             switch (rec.getType()) {
                 case MEET_REC: {
                     MeetInfo meetInfo = MeetInfo.fromSdif(rec);
-                    optResults = Optional.of( new MeetResults(meetInfo, ProcessArchiveItem.Scenario.MEET_RESULTS) );
+                    optResults = Optional.of( new MeetResults(meetInfo, resultScenario) );
                     break;
                 }
                 case TEAM_ID_REC: {
@@ -156,7 +157,7 @@ class ReadResultFilesTask extends ReadSdifArchiveTask<MeetResults>
             results = processMeetEntries(sdifRecs, scenario);
         }
         else {
-            results = processMeetResults(sdifRecs);
+            results = processMeetResults(sdifRecs, scenario);
         }
 
         results.orElseThrow( () -> new SdifException("No results defined in the SDIF file.") )

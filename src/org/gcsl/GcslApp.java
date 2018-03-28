@@ -15,10 +15,8 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.gcsl.db.MeetDbo;
-import org.gcsl.model.Meet;
-import org.gcsl.model.MeetResults;
-import org.gcsl.model.ProcessArchiveItem;
-import org.gcsl.model.Team;
+import org.gcsl.db.TeamDbo;
+import org.gcsl.model.*;
 import org.gcsl.view.*;
 
 import java.io.File;
@@ -33,6 +31,20 @@ public class GcslApp extends Application
     private Connection        dbConn;
     private GcslAppController gcslAppController;
     private Stage             primaryStage;
+
+    private class ChampsReportingInfo
+    {
+        public String entriesDir;
+        public String reportsDir;
+        public Map<Integer, TeamDiveEntries> diveEntriesMap;
+
+        public ChampsReportingInfo(String entriesDir, String reportsDir, Map<Integer, TeamDiveEntries> diveEntryMap)
+        {
+            this.entriesDir = entriesDir;
+            this.reportsDir = reportsDir;
+            this.diveEntriesMap = diveEntryMap;
+        }
+    }
 
 
     @Override
@@ -77,8 +89,14 @@ public class GcslApp extends Application
     // Report the championship entry exceptions
     public void reportChampsExceptions()
     {
-        System.out.println("reportChampsExceptions");
-        showChampsExceptionDialog();
+        ChampsReportingInfo champsInfo = showChampsExceptionDialog();
+        if (champsInfo == null) {
+            gcslAppController.setStatus("Champs Exception Report cancelled.");
+        }
+        else {
+            List<ProcessArchiveItem> entryFiles = showChampEntriesDialog(champsInfo.entriesDir);
+            runChampsReportTask(champsInfo, entryFiles);
+        }
     }
 
 
@@ -153,7 +171,10 @@ public class GcslApp extends Application
                     existingMeetsIDs.add(dbMeet.getId());
                 }
             }
-            if (existingMeetsIDs.size() > 0) {
+            if (existingMeetsIDs.size() == 0) {
+                rc = true;
+            }
+            else {
                 String message = "The following meets already exist: " + existingMeetsIDs.toString();
                 rc = showMeetExistsDialog(message);
             }
@@ -176,6 +197,19 @@ public class GcslApp extends Application
         dbConn = DriverManager.getConnection(url);
 
         gcslAppController.setStatus("Connected to Sqlite DB " + dbFile + ", version " + getDbVersion());
+    }
+
+
+    private Stage createDialogStage(VBox page, String title)
+    {
+        Stage dialogStage = new Stage();
+        dialogStage.setTitle(title);
+        dialogStage.initModality(Modality.WINDOW_MODAL);
+        dialogStage.initOwner(primaryStage);
+        Scene scene = new Scene(page);
+        dialogStage.setScene(scene);
+
+        return dialogStage;
     }
 
 
@@ -310,6 +344,54 @@ public class GcslApp extends Application
     }
 
 
+    private void runChampsExceptionReport(ReadEntryFilesTask entryFilesTask, ChampsReportingInfo reportingInfo)
+    {
+        List<Team> teams = new ArrayList<>();
+        Reports reports = new Reports(dbConn, new File(reportingInfo.reportsDir));
+
+        // Need to catch exceptions here because the task's onSuccess() method can't
+        // deal with exceptions.  (Produces compile error.)
+        try {
+            // Teams info read from entry files does not have team ID,
+            // and consequently, none of the roster athletes do either.
+            // So fix that!
+            for (Team team : entryFilesTask.getValue()) {
+                Team dbTeam = TeamDbo.findByCode(dbConn, team.getCode());
+                if (dbTeam == null) {
+                    throw new Exception("Team: " + team.getCode() + " not found in the database.");
+                }
+                team.setId(dbTeam.getId());
+                teams.add(team);
+            }
+            reports.champsExceptionReport(teams, reportingInfo.diveEntriesMap);
+        }
+        catch (Exception ex) {
+            System.err.println("Caught error creating champs exception report file: " + ex.getMessage());
+            gcslAppController.setStatus("Error creating Champs Exception Report ... ");
+        }
+    }
+
+
+    // Run the champs exception report against a set of champs entry files.
+    private void runChampsReportTask(ChampsReportingInfo champsReportInfo,
+                                     List<ProcessArchiveItem> entryFiles)
+    {
+        if (entryFiles.size() == 0) {
+            gcslAppController.setStatus("Champs Exception Report ... no entries selected.");
+        }
+        ReadEntryFilesTask readFilesTask = new ReadEntryFilesTask(entryFiles);
+        Label taskMessage = bindTaskMessageToStatus(readFilesTask);
+
+        readFilesTask.setOnSucceeded(event -> {
+            taskMessage.textProperty().unbind();
+            runChampsExceptionReport(readFilesTask, champsReportInfo);
+        });
+        readFilesTask.setOnFailed(event -> System.out.println("Run Champs Report Task Failure."));
+
+        startTask(readFilesTask);
+    }
+
+
     // Run a task to add the meet results to the DB.
     private void runResultsToDbTask(ReadResultFilesTask task, Label taskMessage)
     {
@@ -364,8 +446,36 @@ public class GcslApp extends Application
     }
 
 
-    private void showChampsExceptionDialog()
+    private List<ProcessArchiveItem> showChampEntriesDialog(String entriesDir)
     {
+        List<ProcessArchiveItem> entryFiles = Collections.emptyList();
+
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(GcslApp.class.getResource("view/ProcessChampEntriesDialog.fxml"));
+            VBox page = loader.load();
+            Stage dialogStage = createDialogStage(page, "Champs Entries Dialog");
+
+            ProcessChampEntriesDialogController controller = loader.getController();
+            controller.setDialogStage(dialogStage);
+            controller.setEntryDir(entriesDir);
+
+            dialogStage.showAndWait();
+            if (! controller.dialogCancelled()) {
+                entryFiles = controller.getEntryFiles();
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return entryFiles;
+    }
+
+
+    private ChampsReportingInfo showChampsExceptionDialog()
+    {
+        ChampsReportingInfo champsInfo = null;
         String entriesDir = config.getProperty("entries_dir");
         String reportsDir = config.getProperty("reports_dir");
 
@@ -373,30 +483,26 @@ public class GcslApp extends Application
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(GcslApp.class.getResource("view/ChampsExceptionsDialog.fxml"));
             VBox page = loader.load();
-
-            Stage dialogStage = new Stage();
-            dialogStage.setTitle("Champs Exception Dialog");
-            dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(primaryStage);
-            Scene scene = new Scene(page);
-            dialogStage.setScene(scene);
+            Stage dialogStage = createDialogStage(page, "Champs Exception Dialog");
 
             ChampsExceptionsDialogController controller = loader.getController();
             controller.setDialogStage(dialogStage);
+            controller.setDbConnection(dbConn);
             controller.setEntriesDir(entriesDir);
             controller.setReportsDir(reportsDir);
 
             dialogStage.showAndWait();
-            if (controller.dialogCancelled() == true) {
-                gcslAppController.setStatus("Champs Exception Report cancelled.");
-            }
-            else {
-                gcslAppController.setStatus("Champs Exception Report good to go.");
+            if (! controller.dialogCancelled()) {
+                champsInfo = new ChampsReportingInfo(controller.getEntriesDir(),
+                                                     controller.getReportsDir(),
+                                                     controller.getTeamDiveEntriesMap());
             }
         }
         catch (IOException e) {
             e.printStackTrace();
         }
+
+        return champsInfo;
     }
 
 
@@ -421,20 +527,14 @@ public class GcslApp extends Application
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(GcslApp.class.getResource("view/ProcessResultsDialog.fxml"));
             VBox page = loader.load();
-
-            Stage dialogStage = new Stage();
-            dialogStage.setTitle("Results Dialog");
-            dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(primaryStage);
-            Scene scene = new Scene(page);
-            dialogStage.setScene(scene);
+            Stage dialogStage = createDialogStage(page, "Results Dialog");
 
             ProcessResultsDialogController controller = loader.getController();
             controller.setDialogStage(dialogStage);
             controller.setResultDir(resultsDir);
 
             dialogStage.showAndWait();
-            if (controller.dialogCancelled() == true) {
+            if (controller.dialogCancelled()) {
                 gcslAppController.setStatus("Process Meet Results cancelled.");
             }
             else {
@@ -459,20 +559,14 @@ public class GcslApp extends Application
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(GcslApp.class.getResource("view/ProcessRosterDialog.fxml"));
             VBox page = loader.load();
-
-            Stage dialogStage = new Stage();
-            dialogStage.setTitle("Roster Dialog");
-            dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(primaryStage);
-            Scene scene = new Scene(page);
-            dialogStage.setScene(scene);
+            Stage dialogStage = createDialogStage(page, "Roster Dialog");
 
             ProcessRosterDialogController controller = loader.getController();
             controller.setDialogStage(dialogStage);
             controller.setRosterDir(rosterDir);
 
             dialogStage.showAndWait();
-            if (controller.dialogCancelled() == true) {
+            if (controller.dialogCancelled()) {
                 gcslAppController.setStatus("Process Rosters cancelled.");
             }
             else {

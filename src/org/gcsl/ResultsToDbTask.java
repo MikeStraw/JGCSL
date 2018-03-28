@@ -5,10 +5,7 @@ import org.gcsl.db.AthleteDbo;
 import org.gcsl.db.MeetDbo;
 import org.gcsl.db.OrphanDbo;
 import org.gcsl.db.TeamDbo;
-import org.gcsl.model.Athlete;
-import org.gcsl.model.Meet;
-import org.gcsl.model.MeetResults;
-import org.gcsl.model.Team;
+import org.gcsl.model.*;
 import org.gcsl.util.Utils;
 
 import java.sql.Connection;
