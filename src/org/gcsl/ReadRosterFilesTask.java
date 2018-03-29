@@ -44,11 +44,15 @@ class ReadRosterFilesTask extends ReadSdifArchiveTask<Team>
             default:   throw new SdifException("Unknown roster file archive.  Filepath=" + archiveFilePath);
         }
 
-        Team team = readRosterFile(rosterFilePath, rosterFileTypeExpected);
-        if (rosterFileIsTemp) {
-            Files.deleteIfExists(Paths.get(rosterFilePath));
+        Team team;
+        try {
+            team = readRosterFile(rosterFilePath, rosterFileTypeExpected);
         }
-
+        finally {
+            if (rosterFileIsTemp) {
+                Files.deleteIfExists(Paths.get(rosterFilePath));
+            }
+        }
         return team;
     }
 

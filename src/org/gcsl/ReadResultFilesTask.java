@@ -32,11 +32,15 @@ class ReadResultFilesTask extends ReadSdifArchiveTask<MeetResults>
         String  resultFilePath   = extractSdifFileFromArchive(archiveItem);
         boolean resultFileIsTemp = ! archiveFilePath.equals(resultFilePath);  // not equal means is a temp file
 
-        MeetResults meetResults = readResultFile(resultFilePath, archiveItem.getScenarioType());
-        if (resultFileIsTemp) {
-            Files.deleteIfExists(Paths.get(resultFilePath));
+        MeetResults meetResults;
+        try {
+            meetResults = readResultFile(resultFilePath, archiveItem.getScenarioType());
         }
-
+        finally {
+            if (resultFileIsTemp) {
+                Files.deleteIfExists(Paths.get(resultFilePath));
+            }
+        }
         return meetResults;
     }
 

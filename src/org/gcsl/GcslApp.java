@@ -386,7 +386,7 @@ public class GcslApp extends Application
             taskMessage.textProperty().unbind();
             runChampsExceptionReport(readFilesTask, champsReportInfo);
         });
-        readFilesTask.setOnFailed(event -> System.out.println("Run Champs Report Task Failure."));
+        readFilesTask.setOnFailed(event -> onTaskFailure(readFilesTask));
 
         startTask(readFilesTask);
     }
