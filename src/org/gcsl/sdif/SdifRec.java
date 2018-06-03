@@ -5,6 +5,7 @@ public class SdifRec
 {
     public enum SdifRecType {
         FILE_DESCRIPTION_REC   ("A0"),
+        ROSTER_ONLY_REC        ("A1"),   // Swimtopia roster hy3 file uses this a FILE_DESC_REC
         MEET_REC               ("B1"),
         MEET_HOST_REC          ("B2"),
         TEAM_ID_REC            ("C1"),

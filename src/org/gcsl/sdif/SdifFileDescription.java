@@ -61,13 +61,22 @@ public class SdifFileDescription
         }
 
         SdifRec.SdifRecType rt = SdifRec.SdifRecType.fromString(sdifBuf.substring(0,2));
-        if (rt != SdifRec.SdifRecType.FILE_DESCRIPTION_REC) {
+
+        if (rt == SdifRec.SdifRecType.FILE_DESCRIPTION_REC) {
+            fileDate = Utils.makeDateString(sdifBuf.substring(105, 113));
+            fileType = SdifFileType.fromString(sdifBuf.substring(11,13));
+            vendor   = sdifBuf.substring(43, 63).trim();
+            vendorVersion = sdifBuf.substring(63, 73).trim();
+        }
+        else if (rt == SdifRec.SdifRecType.ROSTER_ONLY_REC) {
+            fileDate = Utils.makeDateString(sdifBuf.substring(58, 66));
+            fileType = SdifFileType.fromString("20");  //TODO:  hard code vendor defined for now
+            vendor   = sdifBuf.substring(29,57).trim();
+            vendorVersion = "";
+        }
+        else {
             throw new SdifException("Invalid File Description data:  not file description record");
         }
 
-        fileDate = Utils.makeDateString(sdifBuf.substring(105, 113));
-        fileType = SdifFileType.fromString(sdifBuf.substring(11,13));
-        vendor   = sdifBuf.substring(43, 63).trim();
-        vendorVersion = sdifBuf.substring(63, 73).trim();
     }
 }
