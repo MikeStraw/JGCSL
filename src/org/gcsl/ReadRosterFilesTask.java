@@ -57,7 +57,7 @@ class ReadRosterFilesTask extends ReadSdifArchiveTask<Team>
     }
 
 
-    private Optional<Team> processRosterRecs(List<SdifRec> rosterRecs) throws SdifException
+    private Optional<Team> processRosterRecs(List<SdifRec> rosterRecs, SdifReader.SdifFileFormat fileFormat) throws SdifException
     {
         Optional<Team> optTeam = Optional.empty();
         Team team;
@@ -68,17 +68,27 @@ class ReadRosterFilesTask extends ReadSdifArchiveTask<Team>
                     if (optTeam.isPresent()) {
                         throw new SdifException("More than 1 team defined in the roster file");
                     }
-                    team = Team.fromSdifData(rec);
+                    // HY3 has different format than CL2 and SD3
+                    team = (fileFormat == SdifReader.SdifFileFormat.HY3 ? Team.fromHy3Data(rec)
+                                                                        : Team.fromSdifData(rec));
                     optTeam = Optional.of(team);
                     break;
                 }
 
-                case INDIVIDUAL_ADMIN_REC:  // fall through
-                case INDIVIDUAL_EVENT_REC: {
+                case INDIVIDUAL_ADMIN_REC: {
+                    // HY3 has different format than CL2 and SD3
+                    Athlete athlete = (fileFormat == SdifReader.SdifFileFormat.HY3 ? Athlete.fromHy3(rec)
+                            : Athlete.fromSdif(rec));
 
+                    optTeam.orElseThrow( () -> new SdifException("Athlete rec before team rec.") )
+                           .addAthlete(athlete);
+                    break;
+                }
+
+                case INDIVIDUAL_EVENT_REC: {
                     Athlete athlete = Athlete.fromSdif(rec);
                     optTeam.orElseThrow( () -> new SdifException("Athlete rec before team rec.") )
-                            .addAthlete(athlete);
+                           .addAthlete(athlete);
                     break;
                 }
 
@@ -96,6 +106,7 @@ class ReadRosterFilesTask extends ReadSdifArchiveTask<Team>
     private Team readRosterFile(String rosterFilePath, SdifFileDescription.SdifFileType fileTypeExpected) throws SdifException
     {
         SdifReader sdifReader = new SdifReader(rosterFilePath);
+        SdifReader.SdifFileFormat fileFormat = sdifReader.getFileFormat();
         SdifFileDescription.SdifFileType fileType = sdifReader.getFileDescription().getFileType();
 
         if (fileType != fileTypeExpected) {
@@ -103,7 +114,7 @@ class ReadRosterFilesTask extends ReadSdifArchiveTask<Team>
         }
 
         List<SdifRec>  recs = sdifReader.readFile();
-        Optional<Team> team = processRosterRecs(recs);
+        Optional<Team> team = processRosterRecs(recs, fileFormat);
 
         return team.orElseThrow( () -> new SdifException("No team defined in the SDIF file.") );
     }

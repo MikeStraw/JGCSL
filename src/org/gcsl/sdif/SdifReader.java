@@ -6,10 +6,32 @@ import java.util.ArrayList;
 
 public class SdifReader
 {
+    public enum SdifFileFormat {
+        CL2("CL2"),
+        HY3("HY3"),
+        SD3("SD3"),
+        UNKOWN("");
+
+        private final String format;
+
+        SdifFileFormat(String fmt) { this.format = fmt; }
+        public String getFormat()  { return format; }
+
+        public static SdifReader.SdifFileFormat fromString(String fmt) {
+            for (SdifReader.SdifFileFormat f : SdifReader.SdifFileFormat.values()) {
+                if (f.getFormat().equalsIgnoreCase(fmt)) {
+                    return f;
+                }
+            }
+            return SdifFileFormat.UNKOWN;
+        }
+    }
+
     private SdifFileDescription fileDescription;
+    private SdifFileFormat      fileFormat;
     private long                fileLen;
     private String              filePath;
-    private BufferedReader      sdifReader;
+    private BufferedReader      reader;
 
 
     // Creates an SdifReader and reads the first line of the file in order
@@ -19,12 +41,13 @@ public class SdifReader
     public SdifReader(String sdifFilePath) throws SdifException{
         try {
             File sdifFile = new File(sdifFilePath);
-            fileLen = sdifFile.length();
-            filePath = sdifFilePath;
-            sdifReader = new BufferedReader(new FileReader(sdifFilePath));
+            fileFormat    = SdifFileFormat.fromString(getFileExtension(sdifFile));
+            fileLen       = sdifFile.length();
+            filePath      = sdifFilePath;
+            reader        = new BufferedReader(new FileReader(sdifFilePath));
 
             // first line of file should be File Description Record
-            fileDescription = new SdifFileDescription(sdifReader.readLine());
+            fileDescription = new SdifFileDescription(reader.readLine());
         } catch (Exception e) {
             close();
             throw new SdifException(e);
@@ -33,20 +56,22 @@ public class SdifReader
 
     public void close()
     {
-        if (sdifReader != null) {
+        if (reader != null) {
             try {
-                sdifReader.close();
-                sdifReader = null;
+                reader.close();
             }
             catch (Exception ex) {
                 System.err.println("SDIF file close error ... ignore.");
             }
+            reader = null;
         }
     }
 
     public SdifFileDescription getFileDescription() { return fileDescription; }
+    public SdifFileFormat getFileFormat()           { return fileFormat; }
     public long getFileLen()                        { return fileLen; }
     public String getFilePath()                     { return filePath; }
+
 
     // Reads the SdifFile and returns a list of records.
     // Note that the file is closed after the call to readFile
@@ -57,7 +82,7 @@ public class SdifReader
         ArrayList<SdifRec> recs = new ArrayList<>();
 
         try {
-            while ( (line = sdifReader.readLine()) != null) {
+            while ( (line = reader.readLine()) != null) {
                 recs.add(new SdifRec(line));
             }
         } catch (IOException e) {
@@ -66,5 +91,18 @@ public class SdifReader
         }
         close();
         return recs;
+    }
+
+
+    // Get the extension portion of the file name
+    private String getFileExtension(File f) {
+        String extension = "";
+        String fileName = f.getName();
+
+        int i = fileName.lastIndexOf('.');
+        if (i > 0) {
+            extension = fileName.substring(i+1);
+        }
+        return extension;
     }
 }

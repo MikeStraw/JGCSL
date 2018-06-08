@@ -26,6 +26,14 @@ public class Team
     }
 
     // Factory method to create a Team object from SDIF data
+    public static Team fromHy3Data(SdifRec rec)
+    {
+        String sdifData = rec.getDataBuf();
+        String code = sdifData.substring(2, 7).trim();
+        String name = sdifData.substring(7, 37).trim();
+
+        return new Team(Utils.INVALID_ID, code, name, "");
+    }
     public static Team fromSdifData(SdifRec rec)
     {
         String sdifData = rec.getDataBuf();

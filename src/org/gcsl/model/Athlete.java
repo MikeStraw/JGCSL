@@ -34,6 +34,10 @@ public class Athlete
         this.lastUpdate = lastUpdate;
     }
 
+    public static Athlete fromHy3(SdifRec sdifRec) throws SdifException
+    {
+        return popFromHy3Data(sdifRec);
+    }
     public static Athlete fromSdif(SdifRec sdifRec) throws SdifException
     {
         return popFromSdifData(sdifRec, false);
@@ -81,6 +85,27 @@ public class Athlete
         return name + ":" + dob + ":" + gender + ":" + Integer.toString(teamId);
     }
 
+
+    private static Athlete popFromHy3Data(SdifRec rec) throws SdifException
+    {
+        String dob, gender, fname, lname, mi, name;
+
+        String sdifData = rec.getDataBuf();
+        dob    = Utils.makeDateString(sdifData.substring(88, 96));
+        gender = sdifData.substring(2, 3);
+        fname  = sdifData.substring(28, 48).trim();
+        lname  = sdifData.substring(8, 28).trim();
+        mi     = sdifData.substring(68, 69).trim();
+        name   = (lname + ", " + fname + " " + mi).trim();
+
+        if (name.length() < 3 || dob.length() != 10 || gender.length() != 1) {
+            throw new SdifException("Invalid Athlete Data");
+        }
+
+        Athlete newAthlete = new Athlete(name, gender, dob);
+
+        return newAthlete;
+    }
 
     private static Athlete popFromSdifData(SdifRec rec, boolean checkForNoShow) throws SdifException
     {
