@@ -102,9 +102,7 @@ public class Athlete
             throw new SdifException("Invalid Athlete Data");
         }
 
-        Athlete newAthlete = new Athlete(name, gender, dob);
-
-        return newAthlete;
+        return new Athlete(name, gender, dob);
     }
 
     private static Athlete popFromSdifData(SdifRec rec, boolean checkForNoShow) throws SdifException

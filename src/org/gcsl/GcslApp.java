@@ -189,9 +189,8 @@ public class GcslApp extends Application
     // Connect to the SQLite database and get the version #
     private void connectToDb() throws SQLException
     {
-        String dir = "./";
         String dbFile = config.getProperty("db_file");
-        String url = "jdbc:sqlite:" + dir + dbFile;
+        String url = "jdbc:sqlite:" + dbFile;
 
         System.out.println("Connection to SQLite URL: " + url);
         dbConn = DriverManager.getConnection(url);
