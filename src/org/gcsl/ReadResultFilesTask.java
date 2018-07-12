@@ -45,7 +45,8 @@ class ReadResultFilesTask extends ReadSdifArchiveTask<MeetResults>
     }
 
     private Optional<MeetResults> processMeetEntries(List<SdifRec> entryRecs,
-                                                     ProcessArchiveItem.Scenario scenario) throws SdifException
+                                                     ProcessArchiveItem.Scenario scenario,
+                                                     SdifReader.SdifFileFormat fileFormat) throws SdifException
     {
         Optional<MeetResults> optResults = Optional.empty();
         Optional<Team> optTeam = Optional.empty();
@@ -53,14 +54,28 @@ class ReadResultFilesTask extends ReadSdifArchiveTask<MeetResults>
         for (SdifRec rec : entryRecs) {
             switch (rec.getType()) {
                 case MEET_REC: {
-                    MeetInfo meetInfo = MeetInfo.fromSdif(rec);
+                    // HY3 has different format than CL2 and SD3
+                    MeetInfo meetInfo = (fileFormat == SdifReader.SdifFileFormat.HY3 ? MeetInfo.fromHy3(rec)
+                                                                                     : MeetInfo.fromSdif(rec));
                     optResults = Optional.of(new MeetResults(meetInfo, scenario));
                     break;
                 }
                 case TEAM_ID_REC: {
-                    optTeam = Optional.of(Team.fromSdifData(rec));
+                    // HY3 has different format than CL2 and SD3
+                    Team team = (fileFormat == SdifReader.SdifFileFormat.HY3 ? Team.fromHy3Data(rec)
+                                                                             : Team.fromSdifData(rec));
+                    optTeam = Optional.of(team);
                     optResults.orElseThrow( () -> new SdifException("Meet information required before team information."))
                             .addTeam(optTeam.get());
+                    break;
+                }
+                case INDIVIDUAL_ADMIN_REC: {
+                    // HY3 has different format than CL2 and SD3
+                    Athlete athlete = (fileFormat == SdifReader.SdifFileFormat.HY3 ? Athlete.fromHy3(rec)
+                            : Athlete.fromSdif(rec));
+
+                    optTeam.orElseThrow( () -> new SdifException("Team information required before athlete information.") )
+                           .addAthlete(athlete);
                     break;
                 }
                 case INDIVIDUAL_EVENT_REC: // fall through
@@ -155,10 +170,12 @@ class ReadResultFilesTask extends ReadSdifArchiveTask<MeetResults>
         }
 
         SdifReader sdifReader = new SdifReader(resultFilePath);
+        SdifReader.SdifFileFormat fileFormat = sdifReader.getFileFormat();
+
         List<SdifRec> sdifRecs = readResultFile(sdifReader, fileTypeExpected);
         if (scenario == ProcessArchiveItem.Scenario.BYE_WEEK_ENTRIES
         ||  scenario == ProcessArchiveItem.Scenario.RAIN_OUT_ENTRIES) {
-            results = processMeetEntries(sdifRecs, scenario);
+            results = processMeetEntries(sdifRecs, scenario, fileFormat);
         }
         else {
             results = processMeetResults(sdifRecs, scenario);

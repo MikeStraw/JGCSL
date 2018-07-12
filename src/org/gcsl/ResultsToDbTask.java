@@ -36,13 +36,23 @@ public class ResultsToDbTask extends Task<Void>
             if (isCancelled()) {
                 break;
             }
+
+            // Add bye week team if necessary
+            if (meet.getResultsScenario() == ProcessArchiveItem.Scenario.BYE_WEEK_ENTRIES
+            ||  meet.getResultsScenario() == ProcessArchiveItem.Scenario.BYE_WEEK_RESULTS) {
+                Team byeWeekTeam = TeamDbo.findByCode(dbConn, "BYE");
+                if (byeWeekTeam != null) {
+                    meet.addTeam(byeWeekTeam);
+                }
+            }
+
             curItem++;
             updateMessage("Processing results for meet: " + meet.getName());
             updateProgress(curItem, numItems);
 
             // NOTE:  different result types may only have 1 team
             List<Team> teams = meet.getTeams();
-            if (teams.size() < 2) {
+            if (teams.size() < 2)  {
                 System.err.println("Error:  Not 2 teams in the meet results.");
                 updateMessage("Error:  Not 2 teams in the meet results.");
                 return null;
