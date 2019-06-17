@@ -105,4 +105,20 @@ class AthleteTest
             assertTrue(false);
         }
     }
+
+    @Test
+    void testScratchMeetResult()
+    {
+        String sdifData = "D08        Bucher, Josh                            A   0523200413MM   1H  8 UN1407122017 1:23.55Y                       SCRY     1 4     0       0  06      NN37\n";
+        SdifRec sdifRec = new SdifRec(sdifData);
+
+        try {
+            Athlete scrAthlete = Athlete.fromSdifMeetResult(sdifRec);
+            assertTrue(scrAthlete.isNoShow());
+
+        } catch (SdifException e) {
+            e.printStackTrace();
+            assertTrue(false);
+        }
+    }
 }

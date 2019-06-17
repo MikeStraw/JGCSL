@@ -35,7 +35,7 @@ public class RainOutResultsController
 
     @FXML private void initialize()
     {
-        System.out.println("RainOUutResultsController::initialize MR-size=" + meetResults.size());
+        System.out.println("RainOutResultsController::initialize MR-size=" + meetResults.size());
 
         rainOutEntryFiles.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         setPairLableText();
@@ -61,8 +61,10 @@ public class RainOutResultsController
         Collections.sort(removeIdxs);
         Collections.reverse(removeIdxs);
         for (Integer idx : removeIdxs) {
-            removeIdxs.remove(idx);
+            meetResults.remove(idx.intValue());
+
         }
+        System.out.println("RainOutResultsController::handleCloseButtonClick LEAVING MR-size=" + meetResults.size());
         dialogStage.close();
     }
 

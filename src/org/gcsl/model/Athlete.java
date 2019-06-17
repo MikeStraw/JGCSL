@@ -154,7 +154,7 @@ public class Athlete
                 int timeLen = 8;
                 String finalsTime = sdifData.substring(timeIdx, timeIdx+timeLen).trim();
 
-                if (finalsTime.equals("NS")) {
+                if (finalsTime.equals("NS") ||  finalsTime.equals("SCR")) {
                     newAthlete.setId(NO_SHOW_ID);
                 }
             }

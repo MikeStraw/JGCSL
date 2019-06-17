@@ -43,7 +43,7 @@ public class Reports
 
         try (PrintWriter pw = new PrintWriter(fileSpec)) {
             for(Team team : teams) {
-                String headerText = "Championship exceptions for: " + team.getName();
+                String headerText = "Championship exceptions for: " + team.getName() + ", size=" + team.getTeamSize();
                 System.out.println(headerText);
 
                 pw.println(headerText);

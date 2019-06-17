@@ -123,7 +123,7 @@ class ReadResultFilesTask extends ReadSdifArchiveTask<MeetResults>
                     Athlete athlete = Athlete.fromSdifMeetResult(rec);
                     if (! athlete.isNoShow()) {
                         optTeam.orElseThrow( () -> new SdifException("Team information required before athlete information."))
-                                .addAthlete(athlete);
+                               .addAthlete(athlete);
                     }
 
                     break;
@@ -193,6 +193,9 @@ class ReadResultFilesTask extends ReadSdifArchiveTask<MeetResults>
         SdifFileDescription.SdifFileType actualSdifType = reader.getFileDescription().getFileType();
 
         if (actualSdifType != expectedSdifType) {
+            System.out.println("Result file was of type " + actualSdifType +
+                                       ", expected type of " + expectedSdifType);
+            // TODO:  where is this exception caught????
             throw new SdifException("Result file was of type " + actualSdifType +
                                     ", expected type of " + expectedSdifType);
         }

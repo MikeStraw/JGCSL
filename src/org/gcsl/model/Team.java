@@ -69,6 +69,7 @@ public class Team
     public String getCode()       { return code; }
     public String getName()       { return name; }
     public String getLastUpdate() { return lastUpdate; }
+    public int    getTeamSize()   { return athletes.size(); }
 
     public void setId(int newId)
     {
