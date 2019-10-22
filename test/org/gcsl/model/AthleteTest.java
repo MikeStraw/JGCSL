@@ -86,7 +86,7 @@ class AthleteTest
 
         } catch (SdifException e) {
             e.printStackTrace();
-            assertTrue(false);
+            fail();
         }
     }
 
@@ -102,7 +102,7 @@ class AthleteTest
 
         } catch (SdifException e) {
             e.printStackTrace();
-            assertTrue(false);
+            fail();
         }
     }
 
@@ -118,7 +118,7 @@ class AthleteTest
 
         } catch (SdifException e) {
             e.printStackTrace();
-            assertTrue(false);
+            fail();
         }
     }
 }

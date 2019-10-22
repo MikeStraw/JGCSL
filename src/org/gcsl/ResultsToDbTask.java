@@ -16,7 +16,7 @@ import java.util.ArrayList;
 public class ResultsToDbTask extends Task<Void>
 {
     private Connection dbConn;
-    private List<MeetResults> meetResults = null;
+    private List<MeetResults> meetResults;
 
     ResultsToDbTask(Connection dbConn, List<MeetResults> meetResults)
     {
@@ -75,11 +75,11 @@ public class ResultsToDbTask extends Task<Void>
 
             if (existingMeetId != Utils.INVALID_ID) {
                 MeetDbo.update(dbConn, meet, existingMeetId);
-                System.out.printf("Updated meet %d in the DB.", existingMeetId);
+                System.out.printf("Updated meet %d in the DB.\n", existingMeetId);
             }
             else {
                 int meetId = MeetDbo.insert(dbConn, meet);
-                System.out.printf("Inserted meet %d into the DB.", meetId);
+                System.out.printf("Inserted meet %d into the DB.\n", meetId);
             }
         }
 
